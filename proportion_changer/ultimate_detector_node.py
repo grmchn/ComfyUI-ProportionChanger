@@ -52,11 +52,20 @@ class ProportionChangerUltimateUniAnimateDWPoseDetector:
         # Convert POSE_KEYPOINT to DWPose format
         pose_data = pose_keypoint_to_dwpose_format(pose_keypoints, canvas_width, canvas_height)
         ref_data = None
+        ref_canvas_width, ref_canvas_height = canvas_width, canvas_height
         if reference_pose_keypoint is not None:
-            ref_data = pose_keypoint_to_dwpose_format(reference_pose_keypoint, canvas_width, canvas_height)
+            # Get reference canvas dimensions
+            ref_frame_data = reference_pose_keypoint[0]
+            ref_canvas_width = ref_frame_data.get('canvas_width', 512)
+            ref_canvas_height = ref_frame_data.get('canvas_height', 768)
+            # Convert reference using its own canvas dimensions
+            ref_data = pose_keypoint_to_dwpose_format(reference_pose_keypoint, ref_canvas_width, ref_canvas_height)
         
         # Apply proportion changing algorithms (extracted from original code)
-        processed_pose = self.apply_proportion_changes(pose_data, ref_data, score_threshold)
+        processed_pose = self.apply_proportion_changes(
+            pose_data, ref_data, score_threshold, 
+            canvas_width, canvas_height, ref_canvas_width, ref_canvas_height
+        )
         
         # Convert back to POSE_KEYPOINT format
         result_keypoint = dwpose_format_to_pose_keypoint(
@@ -69,7 +78,8 @@ class ProportionChangerUltimateUniAnimateDWPoseDetector:
         
         return (result_keypoint,)
     
-    def apply_proportion_changes(self, pose_data, ref_data, score_threshold):
+    def apply_proportion_changes(self, pose_data, ref_data, score_threshold, 
+                                canvas_width, canvas_height, ref_canvas_width, ref_canvas_height):
         """
         Apply proportion changing algorithms from the original DWPose detector
         Complete 1:1 port from pose_extract function (lines 241-500+) in WanVideoWrapper
@@ -96,7 +106,11 @@ class ProportionChangerUltimateUniAnimateDWPoseDetector:
             ref_faces = ref_data['faces']
             ref_hands = ref_data['hands']
             
+            # NOTE: Canvas size scaling is handled automatically by the coordinate conversion functions
+            # No manual canvas scaling needed in proportion processing
+            
             # Complete algorithm port from original lines 241-500+
+            # Note: ref_candidate, ref_hands, ref_faces are already canvas-size-scaled if needed
             ref_2_x = ref_candidate[2][0]
             ref_2_y = ref_candidate[2][1]
             ref_5_x = ref_candidate[5][0]
@@ -119,9 +133,18 @@ class ProportionChangerUltimateUniAnimateDWPoseDetector:
             zero_center1 = 0.5*(candidate[2]+candidate[5])
             zero_center2 = 0.5*(candidate[8]+candidate[11])
 
-            x_ratio = (ref_5_x-ref_2_x)/(zero_5_x-zero_2_x)
-            y_ratio = (ref_center2[1]-ref_center1[1])/(zero_center2[1]-zero_center1[1])
+            # Calculate proportion ratios WITHOUT canvas size scaling (will be applied uniformly at the end)
+            ref_proportion_x = (ref_5_x-ref_2_x)
+            ref_proportion_y = (ref_center2[1]-ref_center1[1])
+            target_proportion_x = (zero_5_x-zero_2_x)
+            target_proportion_y = (zero_center2[1]-zero_center1[1])
+            
+            x_ratio = ref_proportion_x / target_proportion_x if target_proportion_x != 0 else 1.0
+            y_ratio = ref_proportion_y / target_proportion_y if target_proportion_y != 0 else 1.0
 
+            # Store original candidate before scaling for face calculations
+            original_candidate = candidate.copy()
+            
             candidate[:,0] *= x_ratio
             candidate[:,1] *= y_ratio
             hands[:,:,0] *= x_ratio
@@ -134,8 +157,10 @@ class ProportionChangerUltimateUniAnimateDWPoseDetector:
                 
                 # Calculate reference and target proportions
                 # Use ACTUAL ears (keypoints 3,4) not knees!
+                # Use original reference measurements (no canvas scaling for face calculations)
                 ref_ear_distance = ((ref_candidate[3][0] - ref_candidate[4][0]) ** 2 + (ref_candidate[3][1] - ref_candidate[4][1]) ** 2) ** 0.5
-                target_ear_distance_original = ((candidate[3][0] - candidate[4][0]) ** 2 + (candidate[3][1] - candidate[4][1]) ** 2) ** 0.5
+                # Use ORIGINAL candidate (before body scaling) for face calculations
+                target_ear_distance_original = ((original_candidate[3][0] - original_candidate[4][0]) ** 2 + (original_candidate[3][1] - original_candidate[4][1]) ** 2) ** 0.5
                 
                 if target_ear_distance_original > 0:
                     # Calculate original face contour width (before any scaling)
@@ -144,14 +169,15 @@ class ProportionChangerUltimateUniAnimateDWPoseDetector:
                     original_face_width = ((original_faces[0, face_right_idx, 0] - original_faces[0, face_left_idx, 0]) ** 2 + 
                                           (original_faces[0, face_right_idx, 1] - original_faces[0, face_left_idx, 1]) ** 2) ** 0.5
                     
-                    # Reference face contour width
+                    # Reference face contour width (use original measurements, canvas scaling applied later)
                     ref_faces = ref_data['faces'] if ref_data else None
                     if ref_faces is not None and len(ref_faces) > 0 and ref_faces.shape[1] > 16:
+                        # Use original reference face measurements (no canvas scaling here)
                         ref_face_width = ((ref_faces[0, face_right_idx, 0] - ref_faces[0, face_left_idx, 0]) ** 2 + 
                                          (ref_faces[0, face_right_idx, 1] - ref_faces[0, face_left_idx, 1]) ** 2) ** 0.5
                         
                         if ref_face_width > 0 and original_face_width > 0:
-                            # X scaling: match reference face proportion
+                            # X scaling: match reference face proportion (no canvas scaling)
                             face_scale_ratio_x = ref_face_width / original_face_width
                             
                             # Y scaling: match reference face height proportion
@@ -164,7 +190,7 @@ class ProportionChangerUltimateUniAnimateDWPoseDetector:
                                 original_face_height = ((original_faces[0, nose_idx, 1] - original_faces[0, chin_idx, 1]) ** 2 + 
                                                        (original_faces[0, nose_idx, 0] - original_faces[0, chin_idx, 0]) ** 2) ** 0.5
                                 
-                                # Calculate reference face height
+                                # Calculate reference face height (use original measurements)
                                 ref_face_height = ((ref_faces[0, nose_idx, 1] - ref_faces[0, chin_idx, 1]) ** 2 + 
                                                  (ref_faces[0, nose_idx, 0] - ref_faces[0, chin_idx, 0]) ** 2) ** 0.5
                                 
@@ -228,6 +254,7 @@ class ProportionChangerUltimateUniAnimateDWPoseDetector:
                     # Apply X and Y offsets independently
                     faces[:, :, 0] += x_offset_face
                     faces[:, :, 1] += y_offset_face
+                    
                 else:
                     # Fallback to body scaling if ear distance calculation fails
                     faces[:,:,0] *= x_ratio
@@ -475,6 +502,12 @@ class ProportionChangerUltimateUniAnimateDWPoseDetector:
             else:
                 # Fallback: apply same offset as body
                 faces += offset[np.newaxis, np.newaxis, :]
+        
+        # NOTE: Canvas scaling is NOT needed here because:
+        # 1. pose_keypoint_to_dwpose_format converts to normalized coordinates (0-1)
+        # 2. proportion processing works on normalized coordinates
+        # 3. dwpose_format_to_pose_keypoint converts back to target canvas coordinates
+        # Adding canvas scaling here would result in double scaling!
         
         return {
             'bodies': {
