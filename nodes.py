@@ -93,34 +93,70 @@ class PoseKeypointPreview:
             "required": {
                 "pose_keypoint": ("POSE_KEYPOINT", {"tooltip": "POSE_KEYPOINT data to convert to JSON"}),
                 "pretty_format": ("BOOLEAN", {"default": True, "tooltip": "Format JSON with indentation for readability"}),
-            }
+            },
+            "hidden": {
+                "unique_id": "UNIQUE_ID",
+                "extra_pnginfo": "EXTRA_PNGINFO",
+            },
         }
     
     RETURN_TYPES = ("STRING",)
     RETURN_NAMES = ("string",)
     FUNCTION = "convert_to_json"
+    OUTPUT_NODE = True
     CATEGORY = "ProportionChanger"
     
-    def convert_to_json(self, pose_keypoint, pretty_format):
+    def convert_to_json(self, pose_keypoint, pretty_format, unique_id=None, extra_pnginfo=None):
         """
         Convert POSE_KEYPOINT data to JSON string that can be copied to PoseJSONToPoseKeypoint
         """
         try:
             if not pose_keypoint or len(pose_keypoint) == 0:
                 text = '{"version": "1.0", "people": []}'
-                return {"ui": {"text": (text,)}, "result": (text,)}
-            
-            # Convert to JSON string
-            if pretty_format:
-                text = json.dumps(pose_keypoint, indent=2, ensure_ascii=False)
             else:
-                text = json.dumps(pose_keypoint, ensure_ascii=False)
+                # Convert to JSON string
+                if pretty_format:
+                    text = json.dumps(pose_keypoint, indent=2, ensure_ascii=False)
+                else:
+                    text = json.dumps(pose_keypoint, ensure_ascii=False)
+            
+            # Update workflow widgets_values to persist data across reloads (like Show Text)
+            if unique_id is not None and extra_pnginfo is not None:
+                if not isinstance(extra_pnginfo, list):
+                    log.error("Error: extra_pnginfo is not a list")
+                elif (
+                    not isinstance(extra_pnginfo[0], dict)
+                    or "workflow" not in extra_pnginfo[0]
+                ):
+                    log.error("Error: extra_pnginfo[0] is not a dict or missing 'workflow' key")
+                else:
+                    workflow = extra_pnginfo[0]["workflow"]
+                    node = next(
+                        (x for x in workflow["nodes"] if str(x["id"]) == str(unique_id[0])),
+                        None,
+                    )
+                    if node:
+                        # Keep pretty_format value, update text display value
+                        node["widgets_values"] = [pretty_format, text]
             
             return {"ui": {"text": (text,)}, "result": (text,)}
             
         except Exception as e:
             log.error(f"Failed to convert POSE_KEYPOINT to JSON: {e}")
             text = f'{{"error": "Failed to convert POSE_KEYPOINT to JSON: {str(e)}"}}'
+            
+            # Update workflow even on error
+            if unique_id is not None and extra_pnginfo is not None:
+                if isinstance(extra_pnginfo, list) and len(extra_pnginfo) > 0:
+                    if isinstance(extra_pnginfo[0], dict) and "workflow" in extra_pnginfo[0]:
+                        workflow = extra_pnginfo[0]["workflow"]
+                        node = next(
+                            (x for x in workflow["nodes"] if str(x["id"]) == str(unique_id[0])),
+                            None,
+                        )
+                        if node:
+                            node["widgets_values"] = [pretty_format, text]
+            
             return {"ui": {"text": (text,)}, "result": (text,)}
 
 

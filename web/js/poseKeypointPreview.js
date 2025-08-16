@@ -55,8 +55,9 @@ app.registerExtension({
                 onConfigure?.apply(this, arguments);
                 const widgets_values = this[VALUES];
                 if (widgets_values?.length) {
+                    // Skip pretty_format widget value (first element), only pass display data
                     requestAnimationFrame(() => {
-                        populate.call(this, widgets_values);
+                        populate.call(this, widgets_values.slice(1));
                     });
                 } else {
                     requestAnimationFrame(() => {
