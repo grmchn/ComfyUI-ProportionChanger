@@ -1031,7 +1031,7 @@ class ProportionChangerUltimateUniAnimateDWPoseDetector:
     def apply_proportion_changes(self, pose_data, ref_data, score_threshold):
         """
         Apply proportion changing algorithms from the original DWPose detector
-        Extracted and adapted from pose_extract function (lines 273-600+)
+        Complete 1:1 port from pose_extract function (lines 241-500+) in WanVideoWrapper
         """
         import numpy as np
         
@@ -1049,54 +1049,334 @@ class ProportionChangerUltimateUniAnimateDWPoseDetector:
             ref_faces = ref_data['faces']
             ref_hands = ref_data['hands']
             
-            # Apply the proportion changing algorithm (simplified version)
-            # Based on shoulder and hip ratios from original code
-            if len(candidate) >= 12 and len(ref_candidate) >= 12:
-                # Calculate reference ratios
-                ref_2_x, ref_2_y = ref_candidate[2][0], ref_candidate[2][1]  # RShoulder
-                ref_5_x, ref_5_y = ref_candidate[5][0], ref_candidate[5][1]  # LShoulder
-                ref_8_x, ref_8_y = ref_candidate[8][0], ref_candidate[8][1]  # RHip
-                ref_11_x, ref_11_y = ref_candidate[11][0], ref_candidate[11][1]  # LHip
+            # Complete algorithm port from original lines 241-500+
+            ref_2_x = ref_candidate[2][0]
+            ref_2_y = ref_candidate[2][1]
+            ref_5_x = ref_candidate[5][0]
+            ref_5_y = ref_candidate[5][1]
+            ref_8_x = ref_candidate[8][0]
+            ref_8_y = ref_candidate[8][1]
+            ref_11_x = ref_candidate[11][0]
+            ref_11_y = ref_candidate[11][1]
+            ref_center1 = 0.5*(ref_candidate[2]+ref_candidate[5])
+            ref_center2 = 0.5*(ref_candidate[8]+ref_candidate[11])
+
+            zero_2_x = candidate[2][0]
+            zero_2_y = candidate[2][1]
+            zero_5_x = candidate[5][0]
+            zero_5_y = candidate[5][1]
+            zero_8_x = candidate[8][0]
+            zero_8_y = candidate[8][1]
+            zero_11_x = candidate[11][0]
+            zero_11_y = candidate[11][1]
+            zero_center1 = 0.5*(candidate[2]+candidate[5])
+            zero_center2 = 0.5*(candidate[8]+candidate[11])
+
+            x_ratio = (ref_5_x-ref_2_x)/(zero_5_x-zero_2_x)
+            y_ratio = (ref_center2[1]-ref_center1[1])/(zero_center2[1]-zero_center1[1])
+
+            candidate[:,0] *= x_ratio
+            candidate[:,1] *= y_ratio
+            hands[:,:,0] *= x_ratio
+            hands[:,:,1] *= y_ratio
+            
+            # Face scaling with independent X and Y scaling based on reference proportions
+            if len(candidate) >= 16 and len(ref_candidate) >= 16 and len(faces) > 0 and faces.shape[1] > 30:
+                # Store original face data before any scaling
+                original_faces = faces.copy()
                 
-                ref_center1 = 0.5 * (ref_candidate[2] + ref_candidate[5])  # Shoulder center
-                ref_center2 = 0.5 * (ref_candidate[8] + ref_candidate[11])  # Hip center
+                # Calculate reference and target proportions
+                ref_ear_distance = ((ref_candidate[14][0] - ref_candidate[15][0]) ** 2 + (ref_candidate[14][1] - ref_candidate[15][1]) ** 2) ** 0.5
+                target_ear_distance_original = ((candidate[14][0] - candidate[15][0]) ** 2 + (candidate[14][1] - candidate[15][1]) ** 2) ** 0.5
                 
-                # Calculate target ratios
-                zero_2_x, zero_2_y = candidate[2][0], candidate[2][1]
-                zero_5_x, zero_5_y = candidate[5][0], candidate[5][1]
-                zero_8_x, zero_8_y = candidate[8][0], candidate[8][1]
-                zero_11_x, zero_11_y = candidate[11][0], candidate[11][1]
-                
-                zero_center1 = 0.5 * (candidate[2] + candidate[5])
-                zero_center2 = 0.5 * (candidate[8] + candidate[11])
-                
-                # Calculate scaling ratios
-                if (zero_5_x - zero_2_x) != 0 and (zero_center2[1] - zero_center1[1]) != 0:
-                    x_ratio = (ref_5_x - ref_2_x) / (zero_5_x - zero_2_x)
-                    y_ratio = (ref_center2[1] - ref_center1[1]) / (zero_center2[1] - zero_center1[1])
+                if target_ear_distance_original > 0:
+                    # Calculate original face contour width (before any scaling)
+                    face_left_idx = 0   # Face contour left
+                    face_right_idx = 16 # Face contour right
+                    original_face_width = ((original_faces[0, face_right_idx, 0] - original_faces[0, face_left_idx, 0]) ** 2 + 
+                                          (original_faces[0, face_right_idx, 1] - original_faces[0, face_left_idx, 1]) ** 2) ** 0.5
                     
-                    # Apply scaling to body keypoints
-                    candidate[:, 0] *= x_ratio
-                    candidate[:, 1] *= y_ratio
+                    # Reference face contour width
+                    ref_faces = ref_data['faces'] if ref_data else None
+                    if ref_faces is not None and len(ref_faces) > 0 and ref_faces.shape[1] > 16:
+                        ref_face_width = ((ref_faces[0, face_right_idx, 0] - ref_faces[0, face_left_idx, 0]) ** 2 + 
+                                         (ref_faces[0, face_right_idx, 1] - ref_faces[0, face_left_idx, 1]) ** 2) ** 0.5
+                        
+                        if ref_face_width > 0 and original_face_width > 0:
+                            # X scaling: match reference face proportion
+                            face_scale_ratio_x = ref_face_width / original_face_width
+                            # Y scaling: match reference ear distance proportion  
+                            face_scale_ratio_y = ref_ear_distance / target_ear_distance_original
+                        else:
+                            # Fallback to body ratios
+                            face_scale_ratio_x = x_ratio
+                            face_scale_ratio_y = y_ratio
+                    else:
+                        # Fallback to body ratios
+                        face_scale_ratio_x = x_ratio
+                        face_scale_ratio_y = y_ratio
                     
-                    # Apply scaling to faces and hands if present
-                    if len(faces) > 0:
-                        faces[:, :, 0] *= x_ratio
-                        faces[:, :, 1] *= y_ratio
+                    # Use face nose tip (keypoint 30) as reference for alignment
+                    face_nose_tip_idx = 30
                     
-                    if len(hands) > 0:
-                        hands[:, :, 0] *= x_ratio
-                        hands[:, :, 1] *= y_ratio
+                    # Get current face nose position (before scaling)
+                    current_face_nose = original_faces[0, face_nose_tip_idx, :]
                     
-                    # Calculate and apply position offset to align neck positions
-                    offset = ref_candidate[1] - candidate[1]
-                    candidate += offset[np.newaxis, :]
+                    # Scale faces relative to current face nose position with different X/Y ratios
+                    faces_centered = original_faces - current_face_nose[np.newaxis, np.newaxis, :]
+                    faces_centered[:, :, 0] *= face_scale_ratio_x  # X scaling
+                    faces_centered[:, :, 1] *= face_scale_ratio_y  # Y scaling
                     
-                    if len(faces) > 0:
-                        faces += offset[np.newaxis, np.newaxis, :]
-                    
-                    if len(hands) > 0:
-                        hands += offset[np.newaxis, np.newaxis, :]
+                    # Align face nose tip with body nose (keypoint 0) after body scaling
+                    body_nose_position = candidate[0]  # Body nose after scaling
+                    faces[:, :, :] = faces_centered + body_nose_position[np.newaxis, np.newaxis, :]
+                else:
+                    # Fallback to body scaling if ear distance calculation fails
+                    faces[:,:,0] *= x_ratio
+                    faces[:,:,1] *= y_ratio
+            else:
+                # Fallback to body scaling if ear keypoints or face data are not available
+                faces[:,:,0] *= x_ratio
+                faces[:,:,1] *= y_ratio
+            
+            ########neck########
+            l_neck_ref = ((ref_candidate[0][0] - ref_candidate[1][0]) ** 2 + (ref_candidate[0][1] - ref_candidate[1][1]) ** 2) ** 0.5
+            l_neck_0 = ((candidate[0][0] - candidate[1][0]) ** 2 + (candidate[0][1] - candidate[1][1]) ** 2) ** 0.5
+            neck_ratio = l_neck_ref / l_neck_0
+
+            x_offset_neck = (candidate[1][0]-candidate[0][0])*(1.-neck_ratio)
+            y_offset_neck = (candidate[1][1]-candidate[0][1])*(1.-neck_ratio)
+
+            candidate[0,0] += x_offset_neck
+            candidate[0,1] += y_offset_neck
+            candidate[14,0] += x_offset_neck
+            candidate[14,1] += y_offset_neck
+            candidate[15,0] += x_offset_neck
+            candidate[15,1] += y_offset_neck
+            candidate[16,0] += x_offset_neck
+            candidate[16,1] += y_offset_neck
+            candidate[17,0] += x_offset_neck
+            candidate[17,1] += y_offset_neck
+            
+            ########shoulder2########
+            l_shoulder2_ref = ((ref_candidate[2][0] - ref_candidate[1][0]) ** 2 + (ref_candidate[2][1] - ref_candidate[1][1]) ** 2) ** 0.5
+            l_shoulder2_0 = ((candidate[2][0] - candidate[1][0]) ** 2 + (candidate[2][1] - candidate[1][1]) ** 2) ** 0.5
+
+            shoulder2_ratio = l_shoulder2_ref / l_shoulder2_0
+
+            x_offset_shoulder2 = (candidate[1][0]-candidate[2][0])*(1.-shoulder2_ratio)
+            y_offset_shoulder2 = (candidate[1][1]-candidate[2][1])*(1.-shoulder2_ratio)
+
+            candidate[2,0] += x_offset_shoulder2
+            candidate[2,1] += y_offset_shoulder2
+            candidate[3,0] += x_offset_shoulder2
+            candidate[3,1] += y_offset_shoulder2
+            candidate[4,0] += x_offset_shoulder2
+            candidate[4,1] += y_offset_shoulder2
+            hands[1,:,0] += x_offset_shoulder2
+            hands[1,:,1] += y_offset_shoulder2
+
+            ########shoulder5########
+            l_shoulder5_ref = ((ref_candidate[5][0] - ref_candidate[1][0]) ** 2 + (ref_candidate[5][1] - ref_candidate[1][1]) ** 2) ** 0.5
+            l_shoulder5_0 = ((candidate[5][0] - candidate[1][0]) ** 2 + (candidate[5][1] - candidate[1][1]) ** 2) ** 0.5
+
+            shoulder5_ratio = l_shoulder5_ref / l_shoulder5_0
+
+            x_offset_shoulder5 = (candidate[1][0]-candidate[5][0])*(1.-shoulder5_ratio)
+            y_offset_shoulder5 = (candidate[1][1]-candidate[5][1])*(1.-shoulder5_ratio)
+
+            candidate[5,0] += x_offset_shoulder5
+            candidate[5,1] += y_offset_shoulder5
+            candidate[6,0] += x_offset_shoulder5
+            candidate[6,1] += y_offset_shoulder5
+            candidate[7,0] += x_offset_shoulder5
+            candidate[7,1] += y_offset_shoulder5
+            hands[0,:,0] += x_offset_shoulder5
+            hands[0,:,1] += y_offset_shoulder5
+
+            ########arm3########
+            l_arm3_ref = ((ref_candidate[3][0] - ref_candidate[2][0]) ** 2 + (ref_candidate[3][1] - ref_candidate[2][1]) ** 2) ** 0.5
+            l_arm3_0 = ((candidate[3][0] - candidate[2][0]) ** 2 + (candidate[3][1] - candidate[2][1]) ** 2) ** 0.5
+
+            arm3_ratio = l_arm3_ref / l_arm3_0
+
+            x_offset_arm3 = (candidate[2][0]-candidate[3][0])*(1.-arm3_ratio)
+            y_offset_arm3 = (candidate[2][1]-candidate[3][1])*(1.-arm3_ratio)
+
+            candidate[3,0] += x_offset_arm3
+            candidate[3,1] += y_offset_arm3
+            candidate[4,0] += x_offset_arm3
+            candidate[4,1] += y_offset_arm3
+            hands[1,:,0] += x_offset_arm3
+            hands[1,:,1] += y_offset_arm3
+
+            ########arm4########
+            l_arm4_ref = ((ref_candidate[4][0] - ref_candidate[3][0]) ** 2 + (ref_candidate[4][1] - ref_candidate[3][1]) ** 2) ** 0.5
+            l_arm4_0 = ((candidate[4][0] - candidate[3][0]) ** 2 + (candidate[4][1] - candidate[3][1]) ** 2) ** 0.5
+
+            arm4_ratio = l_arm4_ref / l_arm4_0
+
+            x_offset_arm4 = (candidate[3][0]-candidate[4][0])*(1.-arm4_ratio)
+            y_offset_arm4 = (candidate[3][1]-candidate[4][1])*(1.-arm4_ratio)
+
+            candidate[4,0] += x_offset_arm4
+            candidate[4,1] += y_offset_arm4
+            hands[1,:,0] += x_offset_arm4
+            hands[1,:,1] += y_offset_arm4
+
+            ########arm6########
+            l_arm6_ref = ((ref_candidate[6][0] - ref_candidate[5][0]) ** 2 + (ref_candidate[6][1] - ref_candidate[5][1]) ** 2) ** 0.5
+            l_arm6_0 = ((candidate[6][0] - candidate[5][0]) ** 2 + (candidate[6][1] - candidate[5][1]) ** 2) ** 0.5
+
+            arm6_ratio = l_arm6_ref / l_arm6_0
+
+            x_offset_arm6 = (candidate[5][0]-candidate[6][0])*(1.-arm6_ratio)
+            y_offset_arm6 = (candidate[5][1]-candidate[6][1])*(1.-arm6_ratio)
+
+            candidate[6,0] += x_offset_arm6
+            candidate[6,1] += y_offset_arm6
+            candidate[7,0] += x_offset_arm6
+            candidate[7,1] += y_offset_arm6
+            hands[0,:,0] += x_offset_arm6
+            hands[0,:,1] += y_offset_arm6
+
+            ########arm7########
+            l_arm7_ref = ((ref_candidate[7][0] - ref_candidate[6][0]) ** 2 + (ref_candidate[7][1] - ref_candidate[6][1]) ** 2) ** 0.5
+            l_arm7_0 = ((candidate[7][0] - candidate[6][0]) ** 2 + (candidate[7][1] - candidate[6][1]) ** 2) ** 0.5
+
+            arm7_ratio = l_arm7_ref / l_arm7_0
+
+            x_offset_arm7 = (candidate[6][0]-candidate[7][0])*(1.-arm7_ratio)
+            y_offset_arm7 = (candidate[6][1]-candidate[7][1])*(1.-arm7_ratio)
+
+            candidate[7,0] += x_offset_arm7
+            candidate[7,1] += y_offset_arm7
+            hands[0,:,0] += x_offset_arm7
+            hands[0,:,1] += y_offset_arm7
+
+            ########head14########
+            l_head14_ref = ((ref_candidate[14][0] - ref_candidate[0][0]) ** 2 + (ref_candidate[14][1] - ref_candidate[0][1]) ** 2) ** 0.5
+            l_head14_0 = ((candidate[14][0] - candidate[0][0]) ** 2 + (candidate[14][1] - candidate[0][1]) ** 2) ** 0.5
+
+            head14_ratio = l_head14_ref / l_head14_0
+
+            x_offset_head14 = (candidate[0][0]-candidate[14][0])*(1.-head14_ratio)
+            y_offset_head14 = (candidate[0][1]-candidate[14][1])*(1.-head14_ratio)
+
+            candidate[14,0] += x_offset_head14
+            candidate[14,1] += y_offset_head14
+            candidate[16,0] += x_offset_head14
+            candidate[16,1] += y_offset_head14
+
+            ########head15########
+            l_head15_ref = ((ref_candidate[15][0] - ref_candidate[0][0]) ** 2 + (ref_candidate[15][1] - ref_candidate[0][1]) ** 2) ** 0.5
+            l_head15_0 = ((candidate[15][0] - candidate[0][0]) ** 2 + (candidate[15][1] - candidate[0][1]) ** 2) ** 0.5
+
+            head15_ratio = l_head15_ref / l_head15_0
+
+            x_offset_head15 = (candidate[0][0]-candidate[15][0])*(1.-head15_ratio)
+            y_offset_head15 = (candidate[0][1]-candidate[15][1])*(1.-head15_ratio)
+
+            candidate[15,0] += x_offset_head15
+            candidate[15,1] += y_offset_head15
+            candidate[17,0] += x_offset_head15
+            candidate[17,1] += y_offset_head15
+
+            ########head16########
+            l_head16_ref = ((ref_candidate[16][0] - ref_candidate[14][0]) ** 2 + (ref_candidate[16][1] - ref_candidate[14][1]) ** 2) ** 0.5
+            l_head16_0 = ((candidate[16][0] - candidate[14][0]) ** 2 + (candidate[16][1] - candidate[14][1]) ** 2) ** 0.5
+
+            head16_ratio = l_head16_ref / l_head16_0
+
+            x_offset_head16 = (candidate[14][0]-candidate[16][0])*(1.-head16_ratio)
+            y_offset_head16 = (candidate[14][1]-candidate[16][1])*(1.-head16_ratio)
+
+            candidate[16,0] += x_offset_head16
+            candidate[16,1] += y_offset_head16
+
+            ########head17########
+            l_head17_ref = ((ref_candidate[17][0] - ref_candidate[15][0]) ** 2 + (ref_candidate[17][1] - ref_candidate[15][1]) ** 2) ** 0.5
+            l_head17_0 = ((candidate[17][0] - candidate[15][0]) ** 2 + (candidate[17][1] - candidate[15][1]) ** 2) ** 0.5
+
+            head17_ratio = l_head17_ref / l_head17_0
+
+            x_offset_head17 = (candidate[15][0]-candidate[17][0])*(1.-head17_ratio)
+            y_offset_head17 = (candidate[15][1]-candidate[17][1])*(1.-head17_ratio)
+
+            candidate[17,0] += x_offset_head17
+            candidate[17,1] += y_offset_head17
+            
+            ########left leg########
+            l_ll1_ref = ((ref_candidate[8][0] - ref_candidate[9][0]) ** 2 + (ref_candidate[8][1] - ref_candidate[9][1]) ** 2) ** 0.5
+            l_ll1_0 = ((candidate[8][0] - candidate[9][0]) ** 2 + (candidate[8][1] - candidate[9][1]) ** 2) ** 0.5
+            ll1_ratio = l_ll1_ref / l_ll1_0
+
+            x_offset_ll1 = (candidate[9][0]-candidate[8][0])*(ll1_ratio-1.)
+            y_offset_ll1 = (candidate[9][1]-candidate[8][1])*(ll1_ratio-1.)
+
+            candidate[9,0] += x_offset_ll1
+            candidate[9,1] += y_offset_ll1
+            candidate[10,0] += x_offset_ll1
+            candidate[10,1] += y_offset_ll1
+            candidate[19,0] += x_offset_ll1
+            candidate[19,1] += y_offset_ll1
+
+            l_ll2_ref = ((ref_candidate[9][0] - ref_candidate[10][0]) ** 2 + (ref_candidate[9][1] - ref_candidate[10][1]) ** 2) ** 0.5
+            l_ll2_0 = ((candidate[9][0] - candidate[10][0]) ** 2 + (candidate[9][1] - candidate[10][1]) ** 2) ** 0.5
+            ll2_ratio = l_ll2_ref / l_ll2_0
+
+            x_offset_ll2 = (candidate[10][0]-candidate[9][0])*(ll2_ratio-1.)
+            y_offset_ll2 = (candidate[10][1]-candidate[9][1])*(ll2_ratio-1.)
+
+            candidate[10,0] += x_offset_ll2
+            candidate[10,1] += y_offset_ll2
+            candidate[19,0] += x_offset_ll2
+            candidate[19,1] += y_offset_ll2
+
+            ########right leg########
+            l_rl1_ref = ((ref_candidate[11][0] - ref_candidate[12][0]) ** 2 + (ref_candidate[11][1] - ref_candidate[12][1]) ** 2) ** 0.5
+            l_rl1_0 = ((candidate[11][0] - candidate[12][0]) ** 2 + (candidate[11][1] - candidate[12][1]) ** 2) ** 0.5
+            rl1_ratio = l_rl1_ref / l_rl1_0
+
+            x_offset_rl1 = (candidate[12][0]-candidate[11][0])*(rl1_ratio-1.)
+            y_offset_rl1 = (candidate[12][1]-candidate[11][1])*(rl1_ratio-1.)
+
+            candidate[12,0] += x_offset_rl1
+            candidate[12,1] += y_offset_rl1
+            candidate[13,0] += x_offset_rl1
+            candidate[13,1] += y_offset_rl1
+            candidate[18,0] += x_offset_rl1
+            candidate[18,1] += y_offset_rl1
+
+            l_rl2_ref = ((ref_candidate[12][0] - ref_candidate[13][0]) ** 2 + (ref_candidate[12][1] - ref_candidate[13][1]) ** 2) ** 0.5
+            l_rl2_0 = ((candidate[12][0] - candidate[13][0]) ** 2 + (candidate[12][1] - candidate[13][1]) ** 2) ** 0.5
+            rl2_ratio = l_rl2_ref / l_rl2_0
+
+            x_offset_rl2 = (candidate[13][0]-candidate[12][0])*(rl2_ratio-1.)
+            y_offset_rl2 = (candidate[13][1]-candidate[12][1])*(rl2_ratio-1.)
+
+            candidate[13,0] += x_offset_rl2
+            candidate[13,1] += y_offset_rl2
+            candidate[18,0] += x_offset_rl2
+            candidate[18,1] += y_offset_rl2
+
+            # Final offset to align neck positions (line 496 in original)
+            offset = ref_candidate[1] - candidate[1]
+
+            candidate += offset[np.newaxis, :]
+            hands += offset[np.newaxis, np.newaxis, :]
+            
+            # Face offset: maintain nose alignment instead of neck alignment
+            if len(faces) > 0 and faces.shape[1] > 30:
+                # Calculate offset to keep face nose aligned with body nose
+                face_nose_tip_idx = 30
+                current_face_nose = faces[0, face_nose_tip_idx, :]
+                body_nose_after_offset = candidate[0]  # Body nose after offset
+                face_offset = body_nose_after_offset - current_face_nose
+                faces += face_offset[np.newaxis, np.newaxis, :]
+            else:
+                # Fallback: apply same offset as body
+                faces += offset[np.newaxis, np.newaxis, :]
         
         return {
             'bodies': {
