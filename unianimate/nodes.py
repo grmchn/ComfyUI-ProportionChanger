@@ -1032,6 +1032,13 @@ class ProportionChangerUltimateUniAnimateDWPoseDetector:
         """
         Apply proportion changing algorithms from the original DWPose detector
         Complete 1:1 port from pose_extract function (lines 241-500+) in WanVideoWrapper
+        
+        DWPose Body Keypoint Structure:
+        0: Nose, 1: Left Eye, 2: Right Eye, 3: Left Ear, 4: Right Ear,
+        5: Left Shoulder, 6: Right Shoulder, 7: Left Elbow, 8: Right Elbow,
+        9: Left Wrist, 10: Right Wrist, 11: Left Hip, 12: Right Hip,
+        13: Left Knee, 14: Right Knee, 15: Left Ankle, 16: Right Ankle,
+        17-24: Foot keypoints (refer to CLAUDE.md for detailed mapping)
         """
         import numpy as np
         
@@ -1086,8 +1093,9 @@ class ProportionChangerUltimateUniAnimateDWPoseDetector:
                 original_faces = faces.copy()
                 
                 # Calculate reference and target proportions
-                ref_ear_distance = ((ref_candidate[14][0] - ref_candidate[15][0]) ** 2 + (ref_candidate[14][1] - ref_candidate[15][1]) ** 2) ** 0.5
-                target_ear_distance_original = ((candidate[14][0] - candidate[15][0]) ** 2 + (candidate[14][1] - candidate[15][1]) ** 2) ** 0.5
+                # Use ACTUAL ears (keypoints 3,4) not knees!
+                ref_ear_distance = ((ref_candidate[3][0] - ref_candidate[4][0]) ** 2 + (ref_candidate[3][1] - ref_candidate[4][1]) ** 2) ** 0.5
+                target_ear_distance_original = ((candidate[3][0] - candidate[4][0]) ** 2 + (candidate[3][1] - candidate[4][1]) ** 2) ** 0.5
                 
                 if target_ear_distance_original > 0:
                     # Calculate original face contour width (before any scaling)
@@ -1105,8 +1113,29 @@ class ProportionChangerUltimateUniAnimateDWPoseDetector:
                         if ref_face_width > 0 and original_face_width > 0:
                             # X scaling: match reference face proportion
                             face_scale_ratio_x = ref_face_width / original_face_width
-                            # Y scaling: match reference ear distance proportion  
-                            face_scale_ratio_y = ref_ear_distance / target_ear_distance_original
+                            
+                            # Y scaling: match reference face height proportion
+                            # Use nose tip (30) to chin (8) distance for face height
+                            nose_idx = 30
+                            chin_idx = 8
+                            
+                            # Calculate original face height
+                            if original_faces.shape[1] > max(nose_idx, chin_idx):
+                                original_face_height = ((original_faces[0, nose_idx, 1] - original_faces[0, chin_idx, 1]) ** 2 + 
+                                                       (original_faces[0, nose_idx, 0] - original_faces[0, chin_idx, 0]) ** 2) ** 0.5
+                                
+                                # Calculate reference face height
+                                ref_face_height = ((ref_faces[0, nose_idx, 1] - ref_faces[0, chin_idx, 1]) ** 2 + 
+                                                 (ref_faces[0, nose_idx, 0] - ref_faces[0, chin_idx, 0]) ** 2) ** 0.5
+                                
+                                if original_face_height > 0 and ref_face_height > 0:
+                                    face_scale_ratio_y = ref_face_height / original_face_height
+                                else:
+                                    # Fallback to ear distance ratio
+                                    face_scale_ratio_y = ref_ear_distance / target_ear_distance_original
+                            else:
+                                # Fallback to ear distance ratio
+                                face_scale_ratio_y = ref_ear_distance / target_ear_distance_original
                         else:
                             # Fallback to body ratios
                             face_scale_ratio_x = x_ratio
@@ -1127,9 +1156,38 @@ class ProportionChangerUltimateUniAnimateDWPoseDetector:
                     faces_centered[:, :, 0] *= face_scale_ratio_x  # X scaling
                     faces_centered[:, :, 1] *= face_scale_ratio_y  # Y scaling
                     
-                    # Align face nose tip with body nose (keypoint 0) after body scaling
+                    # Apply scaling first (relative to original nose position)
+                    faces[:, :, :] = faces_centered + current_face_nose[np.newaxis, np.newaxis, :]
+                    
+                    # Align based on eye positions (most important for visual accuracy)
                     body_nose_position = candidate[0]  # Body nose after scaling
-                    faces[:, :, :] = faces_centered + body_nose_position[np.newaxis, np.newaxis, :]
+                    scaled_face_nose = faces[0, face_nose_tip_idx, :]  # Face nose after scaling
+                    
+                    # Calculate X offset to align nose positions
+                    x_offset_face = body_nose_position[0] - scaled_face_nose[0]
+                    
+                    # Calculate Y offset based on eye level alignment (most important!)
+                    # Use ACTUAL body eyes (keypoints 1,2) - not ear approximation!
+                    body_left_eye = candidate[1]   # Left Eye
+                    body_right_eye = candidate[2]  # Right Eye
+                    body_eye_center_y = (body_left_eye[1] + body_right_eye[1]) / 2.0
+                    
+                    # Calculate face eye center Y position (using eye keypoints 36-47 region average)
+                    if faces.shape[1] > 47:
+                        # Use left eye (36-41) and right eye (42-47) center
+                        left_eye_center_y = np.mean(faces[0, 36:42, 1])
+                        right_eye_center_y = np.mean(faces[0, 42:48, 1])
+                        face_eye_center_y = (left_eye_center_y + right_eye_center_y) / 2.0
+                        
+                        # Align face eye level with body eye level (EXACT match!)
+                        y_offset_face = body_eye_center_y - face_eye_center_y
+                    else:
+                        # Fallback to nose alignment if eye keypoints not available
+                        y_offset_face = body_nose_position[1] - scaled_face_nose[1]
+                    
+                    # Apply X and Y offsets independently
+                    faces[:, :, 0] += x_offset_face
+                    faces[:, :, 1] += y_offset_face
                 else:
                     # Fallback to body scaling if ear distance calculation fails
                     faces[:,:,0] *= x_ratio
