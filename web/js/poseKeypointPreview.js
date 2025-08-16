@@ -7,10 +7,11 @@ app.registerExtension({
         if (nodeData.name === "PoseKeypointPreview") {
             function populate(text) {
                 if (this.widgets) {
-                    for (let i = 0; i < this.widgets.length; i++) {
+                    // Remove all display widgets (keep only the first widget which is pretty_format)
+                    for (let i = this.widgets.length - 1; i >= 1; i--) {
                         this.widgets[i].onRemove?.();
                     }
-                    this.widgets.length = 0;
+                    this.widgets.length = 1;
                 }
 
                 if (text && text.length > 0) {
