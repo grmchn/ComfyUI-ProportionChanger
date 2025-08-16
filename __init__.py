@@ -1,6 +1,8 @@
 # Import nodes from modules
 from .unianimate.nodes import NODE_CLASS_MAPPINGS as UNIANIMATE_NODE_CLASS_MAPPINGS
 from .unianimate.nodes import NODE_DISPLAY_NAME_MAPPINGS as UNIANIMATE_NODE_DISPLAY_NAME_MAPPINGS
+
+# Import from nodes.py (not the nodes/ directory) using simple relative import
 from .nodes import NODE_CLASS_MAPPINGS as UTILITY_NODE_CLASS_MAPPINGS
 from .nodes import NODE_DISPLAY_NAME_MAPPINGS as UTILITY_NODE_DISPLAY_NAME_MAPPINGS
 

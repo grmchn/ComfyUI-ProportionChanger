@@ -1,9 +1,18 @@
 """
-ProportionChanger utility nodes
+ProportionChanger nodes - Main entry point
+Backward compatibility maintained for existing workflows
 """
 
 from .utils import log
 import json
+
+# Import all nodes from our organized structure
+from .proportion_changer import (
+    ProportionChangerUniAnimateDWPoseDetector,
+    ProportionChangerUltimateUniAnimateDWPoseDetector,
+    ProportionChangerDWPoseDetectorForPoseKeypoint,
+    ProportionChangerDWPoseRender
+)
 
 
 class PoseJSONToPoseKeypoint:
@@ -161,11 +170,25 @@ class PoseKeypointPreview:
 
 
 NODE_CLASS_MAPPINGS = {
+    # Main DWPose detector nodes
+    "ProportionChangerUniAnimateDWPoseDetector": ProportionChangerUniAnimateDWPoseDetector,
+    "ProportionChangerUltimateUniAnimateDWPoseDetector": ProportionChangerUltimateUniAnimateDWPoseDetector,
+    "ProportionChangerDWPoseDetectorForPoseKeypoint": ProportionChangerDWPoseDetectorForPoseKeypoint,
+    "ProportionChangerDWPoseRender": ProportionChangerDWPoseRender,
+    
+    # Utility nodes
     "PoseJSONToPoseKeypoint": PoseJSONToPoseKeypoint,
     "PoseKeypointPreview": PoseKeypointPreview,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
+    # Main DWPose detector nodes
+    "ProportionChangerUniAnimateDWPoseDetector": "ProportionChanger UniAnimate DWPose Detector",
+    "ProportionChangerUltimateUniAnimateDWPoseDetector": "ProportionChanger Ultimate UniAnimate DWPose Detector",
+    "ProportionChangerDWPoseDetectorForPoseKeypoint": "ProportionChanger DWPose Detector for PoseKeypoint",
+    "ProportionChangerDWPoseRender": "ProportionChanger DWPose Render",
+    
+    # Utility nodes
     "PoseJSONToPoseKeypoint": "pose_keypoint input",
     "PoseKeypointPreview": "pose_keypoint preview",
 }
