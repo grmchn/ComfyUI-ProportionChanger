@@ -785,11 +785,462 @@ class ProportionChangerUniAnimateDWPoseDetector:
         return (poses, reference_pose, )
 
 
+def pose_keypoint_to_dwpose_format(pose_keypoint, canvas_width, canvas_height):
+    """
+    Convert POSE_KEYPOINT format to DWPose internal format
+    
+    Args:
+        pose_keypoint: POSE_KEYPOINT data (list of dicts)
+        canvas_width: Canvas width for coordinate conversion
+        canvas_height: Canvas height for coordinate conversion
+    
+    Returns:
+        dict: DWPose format with 'bodies', 'faces', 'hands' keys
+    """
+    import numpy as np
+    
+    if not pose_keypoint or len(pose_keypoint) == 0:
+        return {'bodies': {'candidate': np.array([]), 'subset': np.array([])}, 'faces': np.array([]), 'hands': np.array([])}
+    
+    frame_data = pose_keypoint[0]  # Use first frame
+    people = frame_data.get('people', [])
+    
+    if len(people) == 0:
+        return {'bodies': {'candidate': np.array([]), 'subset': np.array([])}, 'faces': np.array([]), 'hands': np.array([])}
+    
+    person = people[0]  # Use first person
+    
+    # Extract keypoints
+    body_kpts = person.get('pose_keypoints_2d', [])
+    face_kpts = person.get('face_keypoints_2d', [])
+    lhand_kpts = person.get('hand_left_keypoints_2d', [])
+    rhand_kpts = person.get('hand_right_keypoints_2d', [])
+    
+    # Convert body keypoints to candidate format
+    candidates = []
+    subset = []
+    
+    if body_kpts and len(body_kpts) >= 75:  # 25 points * 3 (x,y,conf)
+        for i in range(25):  # Support full 25 points including toes
+            x = body_kpts[i*3] / canvas_width if canvas_width > 0 else body_kpts[i*3]
+            y = body_kpts[i*3+1] / canvas_height if canvas_height > 0 else body_kpts[i*3+1]
+            conf = body_kpts[i*3+2]
+            candidates.append([x, y, conf])
+        
+        # Create subset (which keypoints are valid)
+        subset_row = []
+        for i in range(25):
+            if body_kpts[i*3+2] > 0:  # confidence > 0
+                subset_row.append(i)
+            else:
+                subset_row.append(-1)
+        subset.append(subset_row)
+    
+    candidate_array = np.array(candidates) if candidates else np.array([])
+    subset_array = np.array(subset) if subset else np.array([])
+    
+    # Convert face keypoints
+    faces = []
+    if face_kpts and len(face_kpts) >= 210:  # 70 points * 3
+        face_points = []
+        for i in range(70):
+            x = face_kpts[i*3] / canvas_width if canvas_width > 0 else face_kpts[i*3]
+            y = face_kpts[i*3+1] / canvas_height if canvas_height > 0 else face_kpts[i*3+1]
+            conf = face_kpts[i*3+2]
+            face_points.append([x, y, conf])
+        faces.append(face_points)
+    
+    # Convert hand keypoints
+    hands = []
+    if lhand_kpts and len(lhand_kpts) >= 63:  # 21 points * 3
+        lhand_points = []
+        for i in range(21):
+            x = lhand_kpts[i*3] / canvas_width if canvas_width > 0 else lhand_kpts[i*3]
+            y = lhand_kpts[i*3+1] / canvas_height if canvas_height > 0 else lhand_kpts[i*3+1]
+            conf = lhand_kpts[i*3+2]
+            lhand_points.append([x, y, conf])
+        hands.append(lhand_points)
+    
+    if rhand_kpts and len(rhand_kpts) >= 63:  # 21 points * 3
+        rhand_points = []
+        for i in range(21):
+            x = rhand_kpts[i*3] / canvas_width if canvas_width > 0 else rhand_kpts[i*3]
+            y = rhand_kpts[i*3+1] / canvas_height if canvas_height > 0 else rhand_kpts[i*3+1]
+            conf = rhand_kpts[i*3+2]
+            rhand_points.append([x, y, conf])
+        hands.append(rhand_points)
+    
+    faces_array = np.array(faces) if faces else np.array([])
+    hands_array = np.array(hands) if hands else np.array([])
+    
+    return {
+        'bodies': {
+            'candidate': candidate_array,
+            'subset': subset_array
+        },
+        'faces': faces_array,
+        'hands': hands_array
+    }
+
+
+def dwpose_format_to_pose_keypoint(candidate, faces, hands, canvas_width, canvas_height):
+    """
+    Convert DWPose internal format back to POSE_KEYPOINT format
+    
+    Args:
+        candidate: Body keypoints in DWPose format
+        faces: Face keypoints in DWPose format  
+        hands: Hand keypoints in DWPose format
+        canvas_width: Canvas width for coordinate conversion
+        canvas_height: Canvas height for coordinate conversion
+    
+    Returns:
+        list: POSE_KEYPOINT format data
+    """
+    import numpy as np
+    
+    # Convert body keypoints
+    body_keypoints = []
+    if len(candidate) > 0:
+        for i in range(min(25, len(candidate))):  # Support up to 25 points including toes
+            x = candidate[i][0] * canvas_width if canvas_width > 0 else candidate[i][0]
+            y = candidate[i][1] * canvas_height if canvas_height > 0 else candidate[i][1]
+            conf = candidate[i][2] if len(candidate[i]) > 2 else 1.0  # Use 1.0 instead of 0.0 for missing confidence
+            body_keypoints.extend([x, y, conf])
+    
+    # Pad to 25 points if needed
+    while len(body_keypoints) < 75:  # 25 * 3
+        body_keypoints.extend([0.0, 0.0, 0.0])
+    
+    # Convert face keypoints
+    face_keypoints = []
+    if len(faces) > 0 and len(faces[0]) > 0:
+        for i in range(min(70, len(faces[0]))):
+            x = faces[0][i][0] * canvas_width if canvas_width > 0 else faces[0][i][0]
+            y = faces[0][i][1] * canvas_height if canvas_height > 0 else faces[0][i][1]
+            conf = faces[0][i][2] if len(faces[0][i]) > 2 else 1.0  # Use 1.0 instead of 0.0 for missing confidence
+            face_keypoints.extend([x, y, conf])
+    
+    # Pad to 70 points if needed
+    while len(face_keypoints) < 210:  # 70 * 3
+        face_keypoints.extend([0.0, 0.0, 0.0])
+    
+    # Convert hand keypoints
+    lhand_keypoints = []
+    rhand_keypoints = []
+    
+    if len(hands) > 0:
+        # Left hand
+        if len(hands[0]) > 0:
+            for i in range(min(21, len(hands[0]))):
+                x = hands[0][i][0] * canvas_width if canvas_width > 0 else hands[0][i][0]
+                y = hands[0][i][1] * canvas_height if canvas_height > 0 else hands[0][i][1]
+                conf = hands[0][i][2] if len(hands[0][i]) > 2 else 1.0  # Use 1.0 instead of 0.0 for missing confidence
+                lhand_keypoints.extend([x, y, conf])
+        
+        # Right hand
+        if len(hands) > 1 and len(hands[1]) > 0:
+            for i in range(min(21, len(hands[1]))):
+                x = hands[1][i][0] * canvas_width if canvas_width > 0 else hands[1][i][0]
+                y = hands[1][i][1] * canvas_height if canvas_height > 0 else hands[1][i][1]
+                conf = hands[1][i][2] if len(hands[1][i]) > 2 else 1.0  # Use 1.0 instead of 0.0 for missing confidence
+                rhand_keypoints.extend([x, y, conf])
+    
+    # Pad hand keypoints to 21 points if needed
+    while len(lhand_keypoints) < 63:  # 21 * 3
+        lhand_keypoints.extend([0.0, 0.0, 0.0])
+    while len(rhand_keypoints) < 63:  # 21 * 3
+        rhand_keypoints.extend([0.0, 0.0, 0.0])
+    
+    # Create POSE_KEYPOINT structure
+    person_data = {
+        "pose_keypoints_2d": body_keypoints,
+        "face_keypoints_2d": face_keypoints,
+        "hand_left_keypoints_2d": lhand_keypoints,
+        "hand_right_keypoints_2d": rhand_keypoints
+    }
+    
+    frame_data = {
+        "version": "1.0",
+        "people": [person_data] if len(candidate) > 0 else [],
+        "canvas_width": canvas_width,
+        "canvas_height": canvas_height
+    }
+    
+    return frame_data
+
+
+class ProportionChangerUltimateUniAnimateDWPoseDetector:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required": {
+                "pose_keypoints": ("POSE_KEYPOINT", {"tooltip": "Target pose keypoints"}),
+                "score_threshold": ("FLOAT", {"default": 0.3, "min": 0.0, "max": 1.0, "step": 0.01, "tooltip": "Score threshold for pose processing"}),
+            },
+            "optional": {
+                "reference_pose_keypoint": ("POSE_KEYPOINT", {"tooltip": "Reference pose keypoint"}),
+            },
+        }
+
+    RETURN_TYPES = ("POSE_KEYPOINT",)
+    RETURN_NAMES = ("processed_pose_keypoint",)
+    FUNCTION = "process"
+    CATEGORY = "ProportionChanger"
+
+    def process(self, pose_keypoints, score_threshold, reference_pose_keypoint=None):
+        """
+        Process POSE_KEYPOINT data using proportion changing algorithms
+        """
+        import numpy as np
+        
+        if not pose_keypoints or len(pose_keypoints) == 0:
+            # Return empty keypoint data
+            empty_person = {
+                "pose_keypoints_2d": [0.0] * 75,
+                "face_keypoints_2d": [0.0] * 210,
+                "hand_left_keypoints_2d": [0.0] * 63,
+                "hand_right_keypoints_2d": [0.0] * 63
+            }
+            return ([{"people": [empty_person], "canvas_width": 512, "canvas_height": 768}],)
+        
+        # Get canvas dimensions from first frame
+        frame_data = pose_keypoints[0]
+        canvas_width = frame_data.get('canvas_width', 512)
+        canvas_height = frame_data.get('canvas_height', 768)
+        
+        # Convert POSE_KEYPOINT to DWPose format
+        pose_data = pose_keypoint_to_dwpose_format(pose_keypoints, canvas_width, canvas_height)
+        ref_data = None
+        if reference_pose_keypoint is not None:
+            ref_data = pose_keypoint_to_dwpose_format(reference_pose_keypoint, canvas_width, canvas_height)
+        
+        # Apply proportion changing algorithms (extracted from original code)
+        processed_pose = self.apply_proportion_changes(pose_data, ref_data, score_threshold)
+        
+        # Convert back to POSE_KEYPOINT format
+        result_keypoint = dwpose_format_to_pose_keypoint(
+            processed_pose['bodies']['candidate'],
+            processed_pose['faces'],
+            processed_pose['hands'],
+            canvas_width,
+            canvas_height
+        )
+        
+        return (result_keypoint,)
+    
+    def apply_proportion_changes(self, pose_data, ref_data, score_threshold):
+        """
+        Apply proportion changing algorithms from the original DWPose detector
+        Extracted and adapted from pose_extract function (lines 273-600+)
+        """
+        import numpy as np
+        
+        # Get candidate and subset from pose data
+        candidate = pose_data['bodies']['candidate']
+        faces = pose_data['faces']
+        hands = pose_data['hands']
+        
+        if len(candidate) == 0:
+            return pose_data
+        
+        # If reference data is provided, apply proportion changes
+        if ref_data is not None and len(ref_data['bodies']['candidate']) > 0:
+            ref_candidate = ref_data['bodies']['candidate']
+            ref_faces = ref_data['faces']
+            ref_hands = ref_data['hands']
+            
+            # Apply the proportion changing algorithm (simplified version)
+            # Based on shoulder and hip ratios from original code
+            if len(candidate) >= 12 and len(ref_candidate) >= 12:
+                # Calculate reference ratios
+                ref_2_x, ref_2_y = ref_candidate[2][0], ref_candidate[2][1]  # RShoulder
+                ref_5_x, ref_5_y = ref_candidate[5][0], ref_candidate[5][1]  # LShoulder
+                ref_8_x, ref_8_y = ref_candidate[8][0], ref_candidate[8][1]  # RHip
+                ref_11_x, ref_11_y = ref_candidate[11][0], ref_candidate[11][1]  # LHip
+                
+                ref_center1 = 0.5 * (ref_candidate[2] + ref_candidate[5])  # Shoulder center
+                ref_center2 = 0.5 * (ref_candidate[8] + ref_candidate[11])  # Hip center
+                
+                # Calculate target ratios
+                zero_2_x, zero_2_y = candidate[2][0], candidate[2][1]
+                zero_5_x, zero_5_y = candidate[5][0], candidate[5][1]
+                zero_8_x, zero_8_y = candidate[8][0], candidate[8][1]
+                zero_11_x, zero_11_y = candidate[11][0], candidate[11][1]
+                
+                zero_center1 = 0.5 * (candidate[2] + candidate[5])
+                zero_center2 = 0.5 * (candidate[8] + candidate[11])
+                
+                # Calculate scaling ratios
+                if (zero_5_x - zero_2_x) != 0 and (zero_center2[1] - zero_center1[1]) != 0:
+                    x_ratio = (ref_5_x - ref_2_x) / (zero_5_x - zero_2_x)
+                    y_ratio = (ref_center2[1] - ref_center1[1]) / (zero_center2[1] - zero_center1[1])
+                    
+                    # Apply scaling to body keypoints
+                    candidate[:, 0] *= x_ratio
+                    candidate[:, 1] *= y_ratio
+                    
+                    # Apply scaling to faces and hands if present
+                    if len(faces) > 0:
+                        faces[:, :, 0] *= x_ratio
+                        faces[:, :, 1] *= y_ratio
+                    
+                    if len(hands) > 0:
+                        hands[:, :, 0] *= x_ratio
+                        hands[:, :, 1] *= y_ratio
+        
+        return {
+            'bodies': {
+                'candidate': candidate,
+                'subset': pose_data['bodies']['subset']
+            },
+            'faces': faces,
+            'hands': hands
+        }
+
+
+class ProportionChangerDWPoseDetectorForPoseKeypoint:
+    """
+    DWPose detector node that extracts pose keypoints from image and outputs POSE_KEYPOINT format.
+    This node is designed to work with ProportionChangerUltimateUniAnimateDWPoseDetector.
+    Includes toe keypoints (19-24) which are essential for full pose estimation.
+    """
+    
+    @classmethod
+    def INPUT_TYPES(s):
+        return {"required": {
+                "image": ("IMAGE", {"tooltip": "Input image for pose detection"}),
+                "score_threshold": ("FLOAT", {"default": 0.3, "min": 0.0, "max": 1.0, "step": 0.01, "tooltip": "Score threshold for pose detection"}),
+            }
+        }
+
+    RETURN_TYPES = ("POSE_KEYPOINT",)
+    RETURN_NAMES = ("pose_keypoint",)
+    FUNCTION = "detect_pose"
+    CATEGORY = "ProportionChanger"
+
+    def detect_pose(self, image, score_threshold):
+        device = mm.get_torch_device()
+        
+        # Model loading
+        dw_pose_model = "dw-ll_ucoco_384_bs5.torchscript.pt"
+        yolo_model = "yolox_l.torchscript.pt"
+
+        script_directory = os.path.dirname(os.path.abspath(__file__))
+        model_base_path = os.path.join(script_directory, "models", "DWPose")
+
+        model_det = os.path.join(model_base_path, yolo_model)
+        model_pose = os.path.join(model_base_path, dw_pose_model)
+
+        # Download models if not exists
+        if not os.path.exists(model_det):
+            log.info(f"Downloading yolo model to: {model_base_path}")
+            from huggingface_hub import snapshot_download
+            snapshot_download(repo_id="hr16/yolox-onnx", 
+                                allow_patterns=[f"*{yolo_model}*"],
+                                local_dir=model_base_path, 
+                                local_dir_use_symlinks=False)
+            
+        if not os.path.exists(model_pose):
+            log.info(f"Downloading dwpose model to: {model_base_path}")
+            from huggingface_hub import snapshot_download
+            snapshot_download(repo_id="hr16/DWPose-TorchScript-BatchSize5", 
+                                allow_patterns=[f"*{dw_pose_model}*"],
+                                local_dir=model_base_path, 
+                                local_dir_use_symlinks=False)
+
+        # Initialize JIT models
+        if not hasattr(self, "det") or not hasattr(self, "pose"):
+            self.det = torch.jit.load(model_det, map_location=device)
+            self.pose = torch.jit.load(model_pose, map_location=device)
+            self.dwpose_detector = DWposeDetector(self.det, self.pose) 
+
+        # Process image using the same approach as working UniAnimate detector
+        height, width = image.shape[1:3]
+        image_np = image.cpu().numpy() * 255
+        
+        pose_keypoints = []
+        comfy_pbar = ProgressBar(len(image_np))
+        
+        for i, img in enumerate(image_np):
+            try:
+                # Use the high-level DWPose detector call (same as working UniAnimate version)
+                pose = self.dwpose_detector(img, score_threshold=score_threshold)
+                
+                # Convert to POSE_KEYPOINT format using actual canvas dimensions
+                pose_keypoint_frame = dwpose_format_to_pose_keypoint(
+                    pose['bodies']['candidate'], 
+                    pose['faces'], 
+                    pose['hands'], 
+                    width,  # Use actual canvas width for pixel coordinates
+                    height  # Use actual canvas height for pixel coordinates
+                )
+                
+                # Add canvas size info for compatibility
+                pose_keypoint_frame["canvas_width"] = width
+                pose_keypoint_frame["canvas_height"] = height
+                pose_keypoints.append(pose_keypoint_frame)
+                
+            except Exception as e:
+                # Create empty pose data for failed detection
+                empty_pose = {
+                    "version": "1.0",
+                    "people": [],
+                    "canvas_width": width,
+                    "canvas_height": height
+                }
+                pose_keypoints.append(empty_pose)
+            
+            comfy_pbar.update(1)
+
+        return (pose_keypoints,)
+    
+    def _normalize_pose_coordinates(self, pose_keypoint, canvas_width, canvas_height):
+        """
+        Normalize pose coordinates from pixel values to 0-1 range
+        """
+        if not pose_keypoint or "people" not in pose_keypoint:
+            return pose_keypoint
+        
+        for person in pose_keypoint["people"]:
+            # Normalize body keypoints
+            if "pose_keypoints_2d" in person:
+                body_kpts = person["pose_keypoints_2d"]
+                for i in range(0, len(body_kpts), 3):
+                    if i+1 < len(body_kpts):
+                        body_kpts[i] = body_kpts[i] / canvas_width      # x coordinate
+                        body_kpts[i+1] = body_kpts[i+1] / canvas_height  # y coordinate
+            
+            # Normalize face keypoints
+            if "face_keypoints_2d" in person:
+                face_kpts = person["face_keypoints_2d"]
+                for i in range(0, len(face_kpts), 3):
+                    if i+1 < len(face_kpts):
+                        face_kpts[i] = face_kpts[i] / canvas_width
+                        face_kpts[i+1] = face_kpts[i+1] / canvas_height
+            
+            # Normalize hand keypoints
+            for hand_key in ["hand_left_keypoints_2d", "hand_right_keypoints_2d"]:
+                if hand_key in person:
+                    hand_kpts = person[hand_key]
+                    for i in range(0, len(hand_kpts), 3):
+                        if i+1 < len(hand_kpts):
+                            hand_kpts[i] = hand_kpts[i] / canvas_width
+                            hand_kpts[i+1] = hand_kpts[i+1] / canvas_height
+        
+        return pose_keypoint
+
+
 NODE_CLASS_MAPPINGS = {
     "ProportionChangerUniAnimateDWPoseDetector": ProportionChangerUniAnimateDWPoseDetector,
+    "ProportionChangerUltimateUniAnimateDWPoseDetector": ProportionChangerUltimateUniAnimateDWPoseDetector,
+    "ProportionChangerDWPoseDetectorForPoseKeypoint": ProportionChangerDWPoseDetectorForPoseKeypoint,
+    
     }
 NODE_DISPLAY_NAME_MAPPINGS = {
     "ProportionChangerUniAnimateDWPoseDetector": "ProportionChanger UniAnimate DWPose Detector",
+    "ProportionChangerUltimateUniAnimateDWPoseDetector": "ProportionChanger Ultimate UniAnimate DWPose Detector",
+    "ProportionChangerDWPoseDetectorForPoseKeypoint": "ProportionChanger DWPose Detector for POSE_KEYPOINT",
+    
     }
 
     
