@@ -114,10 +114,7 @@ class ProportionChangerParams:
             "translate_y": translate_y
         }
         
-        print(f"[ProportionChangerParams] Received params: {params}")
-        print(f"[ProportionChangerParams] Input pose_keypoint type: {type(pose_keypoint)}")
         if pose_keypoint:
-            print(f"[ProportionChangerParams] Input pose_keypoint length: {len(pose_keypoint)}")
             
             # 入力データの詳細を確認
             if isinstance(pose_keypoint, dict):
@@ -136,12 +133,8 @@ class ProportionChangerParams:
                         r_shoulder_x, r_shoulder_y = kps[6], kps[7]  # index 2 * 3
                         l_shoulder_x, l_shoulder_y = kps[15], kps[16]  # index 5 * 3
                         shoulder_width = ((r_shoulder_x - l_shoulder_x)**2 + (r_shoulder_y - l_shoulder_y)**2)**0.5
-                        print(f"[ProportionChangerParams] Current shoulder width: {shoulder_width:.2f}")
-                        print(f"[ProportionChangerParams] RShoulder: ({r_shoulder_x:.2f}, {r_shoulder_y:.2f})")
-                        print(f"[ProportionChangerParams] LShoulder: ({l_shoulder_x:.2f}, {l_shoulder_y:.2f})")
         
         if not pose_keypoint:
-            print("[ProportionChangerParams] Empty input, returning original")
             return (pose_keypoint,)
         
         # 全てのパラメータがデフォルト値の場合は何もしない
@@ -163,22 +156,18 @@ class ProportionChangerParams:
                 break
         
         if all_default:
-            print("[ProportionChangerParams] All parameters are default values, but still processing to ensure clean data")
             # デフォルト値でも処理を実行（キャッシュされた変更済みデータではなく、元データから処理）
         
         # POSE_KEYPOINTの形式を正規化 (dict形式の場合はリストに変換)
         # 重要：元のオブジェクトを絶対に変更しないよう、必ずdeep copyを作成
         if isinstance(pose_keypoint, dict):
-            print("[ProportionChangerParams] Converting dict to list format")
             adjusted_pose = [copy.deepcopy(pose_keypoint)]
         elif isinstance(pose_keypoint, list):
             adjusted_pose = copy.deepcopy(pose_keypoint)
         else:
-            print(f"[ProportionChangerParams] Unknown input type: {type(pose_keypoint)}")
             # 不明な型でも必ずコピーを返す
             return (copy.deepcopy(pose_keypoint),)
             
-        print(f"[ProportionChangerParams] Processing {len(adjusted_pose)} frame(s)")
         
         # 各フレームのデータを処理
         for frame_data in adjusted_pose:
@@ -192,7 +181,6 @@ class ProportionChangerParams:
             for person in frame_data["people"]:
                 self._adjust_person_pose(person, canvas_width, canvas_height, **params)
         
-        print(f"[ProportionChangerParams] Returning adjusted pose with {len(adjusted_pose)} frame(s)")
         
         # 入力がdict形式だった場合は、単一のdictとして返す
         # 重要：必ず新しいオブジェクトとして返すことで、元データへの参照を切断
@@ -595,16 +583,43 @@ class ProportionChangerParams:
         for group_name, indices in FACE_KP_GROUPS.items():
             scale_factor = GROUP_SCALES.get(group_name, 1.0)
             if scale_factor != 1.0:
-                for idx in indices:
-                    if idx * 3 + 2 < len(adjusted) and adjusted[idx * 3 + 2] > 0:
-                        x, y = adjusted[idx * 3], adjusted[idx * 3 + 1]
+                # Eye groups: use their own face keypoint center for scaling
+                if group_name in ["Left_Eye", "Right_Eye"]:
+                    # Calculate current face eye center (centroid of eye keypoints)
+                    valid_points = []
+                    for idx in indices:
+                        if idx * 3 + 2 < len(adjusted) and adjusted[idx * 3 + 2] > 0:
+                            valid_points.append((adjusted[idx * 3], adjusted[idx * 3 + 1]))
+                    
+                    if valid_points:
+                        # Eye center as scaling origin
+                        eye_center_x = sum(p[0] for p in valid_points) / len(valid_points)
+                        eye_center_y = sum(p[1] for p in valid_points) / len(valid_points)
                         
-                        # 顔の中心からの相対位置でスケーリング
-                        rel_x = (x - face_center_x) * scale_factor
-                        rel_y = (y - face_center_y) * scale_factor
-                        
-                        adjusted[idx * 3] = face_center_x + rel_x
-                        adjusted[idx * 3 + 1] = face_center_y + rel_y
+                        # Scale around the eye's own center
+                        for idx in indices:
+                            if idx * 3 + 2 < len(adjusted) and adjusted[idx * 3 + 2] > 0:
+                                x, y = adjusted[idx * 3], adjusted[idx * 3 + 1]
+                                
+                                # Scale from eye center
+                                rel_x = (x - eye_center_x) * scale_factor
+                                rel_y = (y - eye_center_y) * scale_factor
+                                
+                                # Keep centered at eye center
+                                adjusted[idx * 3] = eye_center_x + rel_x
+                                adjusted[idx * 3 + 1] = eye_center_y + rel_y
+                else:
+                    # Other face parts use nose tip as center
+                    for idx in indices:
+                        if idx * 3 + 2 < len(adjusted) and adjusted[idx * 3 + 2] > 0:
+                            x, y = adjusted[idx * 3], adjusted[idx * 3 + 1]
+                            
+                            # Scale from face center
+                            rel_x = (x - face_center_x) * scale_factor
+                            rel_y = (y - face_center_y) * scale_factor
+                            
+                            adjusted[idx * 3] = face_center_x + rel_x
+                            adjusted[idx * 3 + 1] = face_center_y + rel_y
         
         # eye_height調整（目の位置を上下に移動）
         if eye_height != 0.0:
@@ -721,7 +736,6 @@ class ProportionChangerParams:
         
         # Step 2: 腕の動きに連動して手全体を移動
         if wrist_movement[0] != 0.0 or wrist_movement[1] != 0.0:
-            print(f"[ProportionChangerParams] Moving hand by wrist movement: ({wrist_movement[0]:.2f}, {wrist_movement[1]:.2f})")
             for i in range(0, len(adjusted), 3):  # 手首も含めて全てのキーポイントを移動
                 if i + 2 < len(adjusted) and adjusted[i + 2] > 0:  # 信頼度チェック
                     adjusted[i] += wrist_movement[0]
