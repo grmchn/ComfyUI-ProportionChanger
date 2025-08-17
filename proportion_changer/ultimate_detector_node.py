@@ -17,7 +17,6 @@ class ProportionChangerUltimateUniAnimateDWPoseDetector:
     def INPUT_TYPES(s):
         return {"required": {
                 "pose_keypoints": ("POSE_KEYPOINT", {"tooltip": "Target pose keypoints"}),
-                "score_threshold": ("FLOAT", {"default": 0.3, "min": 0.0, "max": 1.0, "step": 0.01, "tooltip": "Score threshold for pose processing"}),
             },
             "optional": {
                 "reference_pose_keypoint": ("POSE_KEYPOINT", {"tooltip": "Reference pose keypoint"}),
@@ -29,7 +28,7 @@ class ProportionChangerUltimateUniAnimateDWPoseDetector:
     FUNCTION = "process"
     CATEGORY = "ProportionChanger"
 
-    def process(self, pose_keypoints, score_threshold, reference_pose_keypoint=None):
+    def process(self, pose_keypoints, reference_pose_keypoint=None):
         """
         Process POSE_KEYPOINT data using proportion changing algorithms
         """
@@ -63,7 +62,7 @@ class ProportionChangerUltimateUniAnimateDWPoseDetector:
         
         # Apply proportion changing algorithms (extracted from original code)
         processed_pose = self.apply_proportion_changes(
-            pose_data, ref_data, score_threshold, 
+            pose_data, ref_data, 
             canvas_width, canvas_height, ref_canvas_width, ref_canvas_height
         )
         
@@ -78,7 +77,7 @@ class ProportionChangerUltimateUniAnimateDWPoseDetector:
         
         return (result_keypoint,)
     
-    def apply_proportion_changes(self, pose_data, ref_data, score_threshold, 
+    def apply_proportion_changes(self, pose_data, ref_data, 
                                 canvas_width, canvas_height, ref_canvas_width, ref_canvas_height):
         """
         Apply proportion changing algorithms from the original DWPose detector
