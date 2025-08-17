@@ -1714,12 +1714,13 @@ def draw_dwpose_body_and_foot(canvas, body_keypoints, W, H, pose_marker_size, sh
     
     # Debug: check if we have valid keypoints
     valid_keypoints = sum(1 for conf in confidences if conf > 0.0)
-    print(f"🔍 Body Debug - Canvas size: {W}x{H}, Max coord: {max_coord:.4f}, Normalized: {is_normalized}")
-    print(f"🔍 Body Debug - Valid keypoints: {valid_keypoints}/{len(confidences)}")
-    print(f"🔍 Body Debug - First 3 keypoints: {[(i, f'{keypoints[i][0]:.1f}, {keypoints[i][1]:.1f}', f'{confidences[i]:.3f}') for i in range(min(3, len(keypoints)))]}")
+    # Debug logs disabled for legacy unianimate module (use PROPORTION_CHANGER_DEBUG=true to enable)
+    # print(f"🔍 Body Debug - Canvas size: {W}x{H}, Max coord: {max_coord:.4f}, Normalized: {is_normalized}")
+    # print(f"🔍 Body Debug - Valid keypoints: {valid_keypoints}/{len(confidences)}")
+    # print(f"🔍 Body Debug - First 3 keypoints: {[(i, f'{keypoints[i][0]:.1f}, {keypoints[i][1]:.1f}', f'{confidences[i]:.3f}') for i in range(min(3, len(keypoints)))]}")
     
     if valid_keypoints == 0:
-        print("🔍 Body Debug - No valid keypoints, drawing center test circle")
+        # print("🔍 Body Debug - No valid keypoints, drawing center test circle")
         # Draw a small test circle to confirm canvas works
         cv2.circle(canvas, (W//2, H//2), 10, (255, 255, 255), thickness=-1)
         return canvas
@@ -1941,27 +1942,27 @@ class ProportionChangerDWPoseRender:
         if POSE_KEYPOINT is None:
             raise ValueError("POSE_KEYPOINT input is required")
         
-        # Debug: Print POSE_KEYPOINT structure
-        print(f"🔍 Debug POSE_KEYPOINT type: {type(POSE_KEYPOINT)}")
-        if isinstance(POSE_KEYPOINT, list) and len(POSE_KEYPOINT) > 0:
-            print(f"🔍 Debug POSE_KEYPOINT length: {len(POSE_KEYPOINT)}")
-            first_frame = POSE_KEYPOINT[0]
-            print(f"🔍 Debug first frame keys: {first_frame.keys() if isinstance(first_frame, dict) else 'Not a dict'}")
-            if isinstance(first_frame, dict) and 'people' in first_frame:
-                print(f"🔍 Debug people count: {len(first_frame['people'])}")
-                if len(first_frame['people']) > 0:
-                    person = first_frame['people'][0]
-                    if 'pose_keypoints_2d' in person:
-                        keypoints = person['pose_keypoints_2d']
-                        print(f"🔍 Debug pose_keypoints_2d length: {len(keypoints)}")
-                        print(f"🔍 Debug first 9 keypoints: {keypoints[:9]}")
-                        # Check for actual coordinate values
-                        non_zero_coords = [(i//3, keypoints[i], keypoints[i+1], keypoints[i+2]) 
-                                         for i in range(0, min(54, len(keypoints)), 3) 
-                                         if keypoints[i] != 0 or keypoints[i+1] != 0]
-                        print(f"🔍 Debug non-zero coordinates (first 5): {non_zero_coords[:5]}")
-        elif isinstance(POSE_KEYPOINT, dict):
-            print(f"🔍 Debug single frame keys: {POSE_KEYPOINT.keys()}")
+        # Debug logs disabled for legacy unianimate module (use PROPORTION_CHANGER_DEBUG=true to enable)
+        # print(f"🔍 Debug POSE_KEYPOINT type: {type(POSE_KEYPOINT)}")
+        # if isinstance(POSE_KEYPOINT, list) and len(POSE_KEYPOINT) > 0:
+        #     print(f"🔍 Debug POSE_KEYPOINT length: {len(POSE_KEYPOINT)}")
+        #     first_frame = POSE_KEYPOINT[0]
+        #     print(f"🔍 Debug first frame keys: {first_frame.keys() if isinstance(first_frame, dict) else 'Not a dict'}")
+        #     if isinstance(first_frame, dict) and 'people' in first_frame:
+        #         print(f"🔍 Debug people count: {len(first_frame['people'])}")
+        #         if len(first_frame['people']) > 0:
+        #             person = first_frame['people'][0]
+        #             if 'pose_keypoints_2d' in person:
+        #                 keypoints = person['pose_keypoints_2d']
+        #                 print(f"🔍 Debug pose_keypoints_2d length: {len(keypoints)}")
+        #                 print(f"🔍 Debug first 9 keypoints: {keypoints[:9]}")
+        #                 # Check for actual coordinate values
+        #                 non_zero_coords = [(i//3, keypoints[i], keypoints[i+1], keypoints[i+2]) 
+        #                                  for i in range(0, min(54, len(keypoints)), 3) 
+        #                                  if keypoints[i] != 0 or keypoints[i+1] != 0]
+        #                 print(f"🔍 Debug non-zero coordinates (first 5): {non_zero_coords[:5]}")
+        # elif isinstance(POSE_KEYPOINT, dict):
+        #     print(f"🔍 Debug single frame keys: {POSE_KEYPOINT.keys()}")
         
         # Render using DWPose algorithms
         pose_imgs = draw_dwpose_render(

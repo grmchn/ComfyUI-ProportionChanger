@@ -131,15 +131,23 @@ class PoseKeypointPreview:
             
             # Update workflow widgets_values to persist data across reloads (like Show Text)
             if unique_id is not None and extra_pnginfo is not None:
+                # Ensure extra_pnginfo is a list
                 if not isinstance(extra_pnginfo, list):
-                    log.error("Error: extra_pnginfo is not a list")
-                elif (
-                    not isinstance(extra_pnginfo[0], dict)
-                    or "workflow" not in extra_pnginfo[0]
-                ):
-                    log.error("Error: extra_pnginfo[0] is not a dict or missing 'workflow' key")
-                else:
-                    workflow = extra_pnginfo[0]["workflow"]
+                    log.warning(f"extra_pnginfo is not a list (type: {type(extra_pnginfo)}), attempting to convert")
+                    if isinstance(extra_pnginfo, dict):
+                        extra_pnginfo = [extra_pnginfo]
+                    else:
+                        log.error(f"Cannot convert extra_pnginfo to list, skipping workflow update")
+                        extra_pnginfo = None
+                
+                if extra_pnginfo and len(extra_pnginfo) > 0:
+                    if (
+                        not isinstance(extra_pnginfo[0], dict)
+                        or "workflow" not in extra_pnginfo[0]
+                    ):
+                        log.error("Error: extra_pnginfo[0] is not a dict or missing 'workflow' key")
+                    else:
+                        workflow = extra_pnginfo[0]["workflow"]
                     node = next(
                         (x for x in workflow["nodes"] if str(x["id"]) == str(unique_id[0])),
                         None,
@@ -156,7 +164,14 @@ class PoseKeypointPreview:
             
             # Update workflow even on error
             if unique_id is not None and extra_pnginfo is not None:
-                if isinstance(extra_pnginfo, list) and len(extra_pnginfo) > 0:
+                # Ensure extra_pnginfo is a list (error case)
+                if not isinstance(extra_pnginfo, list):
+                    if isinstance(extra_pnginfo, dict):
+                        extra_pnginfo = [extra_pnginfo]
+                    else:
+                        extra_pnginfo = None
+                
+                if extra_pnginfo and len(extra_pnginfo) > 0:
                     if isinstance(extra_pnginfo[0], dict) and "workflow" in extra_pnginfo[0]:
                         workflow = extra_pnginfo[0]["workflow"]
                         node = next(

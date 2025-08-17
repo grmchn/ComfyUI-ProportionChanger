@@ -8,6 +8,17 @@ import torch
 
 # Import rendering utilities from our utils package
 from ..utils import draw_dwpose_render
+import os
+import logging
+
+# Debug mode control via environment variable (local implementation to avoid imports)
+DEBUG_MODE = os.getenv('PROPORTION_CHANGER_DEBUG', 'false').lower() in ('true', '1', 'yes')
+log = logging.getLogger(__name__)
+
+def debug_log(message):
+    """Conditional debug logging - only outputs if DEBUG_MODE is enabled"""
+    if DEBUG_MODE:
+        log.debug(f"🔍 {message}")
 
 
 class ProportionChangerDWPoseRender:
@@ -44,26 +55,26 @@ class ProportionChangerDWPoseRender:
             raise ValueError("pose_keypoint input is required")
         
         # Debug: Print pose_keypoint structure
-        print(f"🔍 Debug pose_keypoint type: {type(pose_keypoint)}")
+        debug_log(f"Debug pose_keypoint type: {type(pose_keypoint)}")
         if isinstance(pose_keypoint, list) and len(pose_keypoint) > 0:
-            print(f"🔍 Debug pose_keypoint length: {len(pose_keypoint)}")
+            debug_log(f"Debug pose_keypoint length: {len(pose_keypoint)}")
             first_frame = pose_keypoint[0]
-            print(f"🔍 Debug first frame keys: {first_frame.keys() if isinstance(first_frame, dict) else 'Not a dict'}")
+            debug_log(f"Debug first frame keys: {first_frame.keys() if isinstance(first_frame, dict) else 'Not a dict'}")
             if isinstance(first_frame, dict) and 'people' in first_frame:
-                print(f"🔍 Debug people count: {len(first_frame['people'])}")
+                debug_log(f"Debug people count: {len(first_frame['people'])}")
                 if len(first_frame['people']) > 0:
                     person = first_frame['people'][0]
                     if 'pose_keypoints_2d' in person:
                         keypoints = person['pose_keypoints_2d']
-                        print(f"🔍 Debug pose_keypoints_2d length: {len(keypoints)}")
-                        print(f"🔍 Debug first 9 keypoints: {keypoints[:9]}")
+                        debug_log(f"Debug pose_keypoints_2d length: {len(keypoints)}")
+                        debug_log(f"Debug first 9 keypoints: {keypoints[:9]}")
                         # Check for actual coordinate values
                         non_zero_coords = [(i//3, keypoints[i], keypoints[i+1], keypoints[i+2]) 
                                          for i in range(0, min(54, len(keypoints)), 3) 
                                          if keypoints[i] != 0 or keypoints[i+1] != 0]
-                        print(f"🔍 Debug non-zero coordinates (first 5): {non_zero_coords[:5]}")
+                        debug_log(f"Debug non-zero coordinates (first 5): {non_zero_coords[:5]}")
         elif isinstance(pose_keypoint, dict):
-            print(f"🔍 Debug single frame keys: {pose_keypoint.keys()}")
+            debug_log(f"Debug single frame keys: {pose_keypoint.keys()}")
         
         # Render using DWPose algorithms
         pose_imgs = draw_dwpose_render(

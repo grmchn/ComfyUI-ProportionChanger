@@ -7,6 +7,17 @@ import cv2
 import math
 import numpy as np
 import colorsys
+import os
+import logging
+
+# Debug mode control via environment variable (local implementation to avoid imports)
+DEBUG_MODE = os.getenv('PROPORTION_CHANGER_DEBUG', 'false').lower() in ('true', '1', 'yes')
+log = logging.getLogger(__name__)
+
+def debug_log(message):
+    """Conditional debug logging - only outputs if DEBUG_MODE is enabled"""
+    if DEBUG_MODE:
+        log.debug(f"🔍 {message}")
 
 
 def draw_dwpose_render(pose_keypoint, resolution_x, show_body, show_face, show_hands, show_feet, 
@@ -141,12 +152,12 @@ def draw_dwpose_body_and_foot(canvas, body_keypoints, W, H, pose_marker_size, sh
     
     # Debug: check if we have valid keypoints
     valid_keypoints = sum(1 for conf in confidences if conf > 0.0)
-    print(f"🔍 Body Debug - Canvas size: {W}x{H}, Max coord: {max_coord:.4f}, Normalized: {is_normalized}")
-    print(f"🔍 Body Debug - Valid keypoints: {valid_keypoints}/{len(confidences)}")
-    print(f"🔍 Body Debug - First 3 keypoints: {[(i, f'{keypoints[i][0]:.1f}, {keypoints[i][1]:.1f}', f'{confidences[i]:.3f}') for i in range(min(3, len(keypoints)))]}")
+    debug_log(f"Body Debug - Canvas size: {W}x{H}, Max coord: {max_coord:.4f}, Normalized: {is_normalized}")
+    debug_log(f"Body Debug - Valid keypoints: {valid_keypoints}/{len(confidences)}")
+    debug_log(f"Body Debug - First 3 keypoints: {[(i, f'{keypoints[i][0]:.1f}, {keypoints[i][1]:.1f}', f'{confidences[i]:.3f}') for i in range(min(3, len(keypoints)))]}")
     
     if valid_keypoints == 0:
-        print("🔍 Body Debug - No valid keypoints, drawing center test circle")
+        debug_log("Body Debug - No valid keypoints, drawing center test circle")
         # Draw a small test circle to confirm canvas works
         cv2.circle(canvas, (W//2, H//2), 10, (255, 255, 255), thickness=-1)
         return canvas

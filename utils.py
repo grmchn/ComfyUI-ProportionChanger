@@ -1,6 +1,7 @@
 import importlib.metadata
 import torch
 import logging
+import os
 from tqdm import tqdm
 import types, collections
 from comfy.utils import ProgressBar, copy_to_param, set_attr_param
@@ -8,8 +9,31 @@ from comfy.model_patcher import get_key_weight, string_to_seed
 from comfy.lora import calculate_weight
 from comfy.model_management import cast_to_device
 from comfy.float import stochastic_rounding
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+# Debug mode control via environment variable
+DEBUG_MODE = os.getenv('PROPORTION_CHANGER_DEBUG', 'false').lower() in ('true', '1', 'yes')
+
+# Configure logging based on debug mode
+log_level = logging.DEBUG if DEBUG_MODE else logging.INFO
+logging.basicConfig(level=log_level, format='%(asctime)s - %(levelname)s - %(message)s')
 log = logging.getLogger(__name__)
+
+def debug_log(message):
+    """Conditional debug logging - only outputs if DEBUG_MODE is enabled"""
+    if DEBUG_MODE:
+        log.debug(f"🔍 {message}")
+
+def info_log(message):
+    """Standard info logging"""
+    log.info(message)
+
+def warning_log(message):
+    """Warning logging"""
+    log.warning(message)
+
+def error_log(message):
+    """Error logging"""
+    log.error(message)
 
 from accelerate.utils import set_module_tensor_to_device
 def check_diffusers_version():
