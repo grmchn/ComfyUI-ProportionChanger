@@ -211,11 +211,39 @@ class ProportionChangerParams:
         translate_x = params.get("translate_x", 0.0)
         translate_y = params.get("translate_y", 0.0)
         
+        # 手首の移動量を記録するため、Body keypoints調整前の位置を保存
+        original_wrist_positions = {}
+        if "pose_keypoints_2d" in person and person["pose_keypoints_2d"]:
+            kps = person["pose_keypoints_2d"]
+            # 手首の位置を記録: Left Wrist (index 7) and Right Wrist (index 4)
+            if len(kps) >= 24:  # 8 * 3 = 24 (index 7まで確保)
+                original_wrist_positions["left"] = [kps[21], kps[22]]  # index 7 * 3
+            if len(kps) >= 15:  # 5 * 3 = 15 (index 4まで確保)
+                original_wrist_positions["right"] = [kps[12], kps[13]]  # index 4 * 3
+        
         # Body keypoints調整
         if "pose_keypoints_2d" in person and person["pose_keypoints_2d"]:
             person["pose_keypoints_2d"] = self._adjust_body_keypoints(
                 person["pose_keypoints_2d"], canvas_width, canvas_height, **params
             )
+        
+        # 手首の移動量を計算
+        wrist_movements = {}
+        if "pose_keypoints_2d" in person and person["pose_keypoints_2d"]:
+            kps = person["pose_keypoints_2d"]
+            # 調整後の手首位置と比較
+            if "left" in original_wrist_positions and len(kps) >= 24:
+                new_left_wrist = [kps[21], kps[22]]
+                wrist_movements["left"] = [
+                    new_left_wrist[0] - original_wrist_positions["left"][0],
+                    new_left_wrist[1] - original_wrist_positions["left"][1]
+                ]
+            if "right" in original_wrist_positions and len(kps) >= 15:
+                new_right_wrist = [kps[12], kps[13]]
+                wrist_movements["right"] = [
+                    new_right_wrist[0] - original_wrist_positions["right"][0],
+                    new_right_wrist[1] - original_wrist_positions["right"][1]
+                ]
         
         # Face keypoints調整
         if "face_keypoints_2d" in person and person["face_keypoints_2d"]:
@@ -223,15 +251,17 @@ class ProportionChangerParams:
                 person["face_keypoints_2d"], canvas_width, canvas_height, **params
             )
         
-        # Hand keypoints調整
+        # Hand keypoints調整（手首の移動量も考慮）
         if "hand_left_keypoints_2d" in person and person["hand_left_keypoints_2d"]:
             person["hand_left_keypoints_2d"] = self._adjust_hand_keypoints(
-                person["hand_left_keypoints_2d"], canvas_width, canvas_height, **params
+                person["hand_left_keypoints_2d"], canvas_width, canvas_height, 
+                wrist_movement=wrist_movements.get("left", [0.0, 0.0]), **params
             )
         
         if "hand_right_keypoints_2d" in person and person["hand_right_keypoints_2d"]:
             person["hand_right_keypoints_2d"] = self._adjust_hand_keypoints(
-                person["hand_right_keypoints_2d"], canvas_width, canvas_height, **params
+                person["hand_right_keypoints_2d"], canvas_width, canvas_height,
+                wrist_movement=wrist_movements.get("right", [0.0, 0.0]), **params
             )
         
         # 全体変換を最後に適用
@@ -253,11 +283,11 @@ class ProportionChangerParams:
         original = keypoints.copy()
         adjusted = keypoints.copy()
         
-        # キーポイント定義（OpenPose標準）
+        # DWPose keypoint definitions (corrected based on actual data structure)
         KP = {
             "Nose": 0, "Neck": 1, "RShoulder": 2, "RElbow": 3, "RWrist": 4,
-            "LShoulder": 5, "LElbow": 6, "LWrist": 7, "RHip": 8, "RKnee": 9,
-            "RAnkle": 10, "LHip": 11, "LKnee": 12, "LAnkle": 13, "REye": 14,
+            "LShoulder": 5, "LElbow": 6, "LWrist": 7, "LHip": 8, "LKnee": 9,
+            "LAnkle": 10, "RHip": 11, "RKnee": 12, "RAnkle": 13, "REye": 14,
             "LEye": 15, "REar": 16, "LEar": 17
         }
         
@@ -271,7 +301,7 @@ class ProportionChangerParams:
                 kps[index * 3] = point[0]
                 kps[index * 3 + 1] = point[1]
         
-        # パラメータ取得
+        # Get scaling parameters
         pelvis_scale = params.get("pelvis_scale", 1.0)
         torso_scale = params.get("torso_scale", 1.0)
         neck_scale = params.get("neck_scale", 1.0)
@@ -280,14 +310,14 @@ class ProportionChangerParams:
         arm_scale = params.get("arm_scale", 1.0)
         leg_scale = params.get("leg_scale", 1.0)
         
-        # 元の基準点の取得（常に original から取得）
+        # Get original reference points (always from original keypoints)
         orig_r_hip = get_point(original, KP["RHip"])
         orig_l_hip = get_point(original, KP["LHip"])
         orig_neck = get_point(original, KP["Neck"])
         orig_nose = get_point(original, KP["Nose"])
         
         if not all([orig_r_hip, orig_l_hip, orig_neck, orig_nose]):
-            return adjusted  # 基本キーポイントが不足している場合はそのまま返す
+            return adjusted  # Return unchanged if essential keypoints are missing
         
         # 階層構造で変換を適用：hip_center → neck → shoulders → arms, legs
         # 全て元の座標を基準に計算し、依存関係を考慮
@@ -464,6 +494,43 @@ class ProportionChangerParams:
                                 new_joint = [orig_joint[0] + hip_movement[0], orig_joint[1] + hip_movement[1]]
                                 set_point(adjusted, KP[kp_name], new_joint)
         
+        # 7. Toe/heel adjustment (ankle-based leg_scale scaling)
+        current_l_ankle = get_point(adjusted, KP["LAnkle"])
+        current_r_ankle = get_point(adjusted, KP["RAnkle"])
+        orig_l_ankle = get_point(original, KP["LAnkle"]) 
+        orig_r_ankle = get_point(original, KP["RAnkle"])
+        
+        if len(adjusted) >= 60:  # Check if toe/heel keypoints exist
+            # Toe/heel keypoint definitions (based on actual data structure)
+            # 18: RBigToe (right foot toe), 19: LBigToe (left foot toe)
+            TOE_HEEL_MAPPING = {
+                18: ("RBigToe", current_r_ankle, orig_r_ankle),  # Right toe -> right ankle reference
+                19: ("LBigToe", current_l_ankle, orig_l_ankle),  # Left toe -> left ankle reference
+            }
+            
+            for idx, (name, current_ankle, orig_ankle) in TOE_HEEL_MAPPING.items():
+                keypoint_start = idx * 3
+                if (keypoint_start + 2 < len(original) and original[keypoint_start + 2] > 0 and 
+                    current_ankle and orig_ankle):  # Only if both ankle and toe exist
+                    
+                    orig_toe_heel = [original[keypoint_start], original[keypoint_start + 1]]
+                    confidence = original[keypoint_start + 2]
+                    
+                    if leg_scale != 1.0:
+                        # Maintain direction vector from ankle to toe, scale distance only
+                        orig_relative = [orig_toe_heel[0] - orig_ankle[0], orig_toe_heel[1] - orig_ankle[1]]
+                        scaled_relative = [orig_relative[0] * leg_scale, orig_relative[1] * leg_scale]
+                        new_toe_heel = [current_ankle[0] + scaled_relative[0], current_ankle[1] + scaled_relative[1]]
+                    else:
+                        # leg_scale=1.0: follow ankle movement
+                        ankle_movement = [current_ankle[0] - orig_ankle[0], current_ankle[1] - orig_ankle[1]]
+                        new_toe_heel = [orig_toe_heel[0] + ankle_movement[0], orig_toe_heel[1] + ankle_movement[1]]
+                    
+                    # Update toe/heel position
+                    adjusted[keypoint_start] = new_toe_heel[0]
+                    adjusted[keypoint_start + 1] = new_toe_heel[1]
+                    # Keep confidence unchanged
+        
         return adjusted
     
     def _adjust_face_keypoints(self, keypoints, canvas_width, canvas_height, **params):
@@ -602,16 +669,25 @@ class ProportionChangerParams:
         
         return adjusted
     
-    def _adjust_hand_keypoints(self, keypoints, canvas_width, canvas_height, **params):
+    def _adjust_hand_keypoints(self, keypoints, canvas_width, canvas_height, wrist_movement=None, **params):
         """
         Hand keypointsの調整処理
-        手首を基準としたスケーリング
+        手首を基準としたスケーリング + 腕の動きに連動した位置調整
+        
+        Args:
+            wrist_movement: [dx, dy] 手首の移動量（腕のスケーリングによる）
         """
         if not keypoints or len(keypoints) < 63:  # 21 keypoints * 3 = 63
             return keypoints
             
         hands_scale = params.get("hands_scale", 1.0)
-        if hands_scale == 1.0:
+        
+        # wrist_movementがNoneの場合はデフォルト値を設定
+        if wrist_movement is None:
+            wrist_movement = [0.0, 0.0]
+            
+        # hands_scaleが1.0でwrist_movementも0の場合は何もしない
+        if hands_scale == 1.0 and wrist_movement[0] == 0.0 and wrist_movement[1] == 0.0:
             return keypoints
             
         adjusted = keypoints.copy()
@@ -622,19 +698,34 @@ class ProportionChangerParams:
         wrist_conf = adjusted[2]
         
         if wrist_conf <= 0:
-            return adjusted  # 手首が検出されていない場合はそのまま返す
+            # 手首が検出されていない場合でも、手全体を移動
+            if wrist_movement[0] != 0.0 or wrist_movement[1] != 0.0:
+                for i in range(0, len(adjusted), 3):
+                    if i + 2 < len(adjusted) and adjusted[i + 2] > 0:
+                        adjusted[i] += wrist_movement[0]
+                        adjusted[i + 1] += wrist_movement[1]
+            return adjusted
         
-        # 手首を基準として他の全ての関節をスケーリング
-        for i in range(3, len(adjusted), 3):  # 手首以外の関節から開始
-            if i + 2 < len(adjusted) and adjusted[i + 2] > 0:  # 信頼度チェック
-                x, y = adjusted[i], adjusted[i + 1]
-                
-                # 手首からの相対位置でスケーリング
-                scaled_x = wrist_x + (x - wrist_x) * hands_scale
-                scaled_y = wrist_y + (y - wrist_y) * hands_scale
-                
-                adjusted[i] = scaled_x
-                adjusted[i + 1] = scaled_y
+        # Step 1: 手首を基準として hands_scale でスケーリング
+        if hands_scale != 1.0:
+            for i in range(3, len(adjusted), 3):  # 手首以外の関節から開始
+                if i + 2 < len(adjusted) and adjusted[i + 2] > 0:  # 信頼度チェック
+                    x, y = adjusted[i], adjusted[i + 1]
+                    
+                    # 手首からの相対位置でスケーリング
+                    scaled_x = wrist_x + (x - wrist_x) * hands_scale
+                    scaled_y = wrist_y + (y - wrist_y) * hands_scale
+                    
+                    adjusted[i] = scaled_x
+                    adjusted[i + 1] = scaled_y
+        
+        # Step 2: 腕の動きに連動して手全体を移動
+        if wrist_movement[0] != 0.0 or wrist_movement[1] != 0.0:
+            print(f"[ProportionChangerParams] Moving hand by wrist movement: ({wrist_movement[0]:.2f}, {wrist_movement[1]:.2f})")
+            for i in range(0, len(adjusted), 3):  # 手首も含めて全てのキーポイントを移動
+                if i + 2 < len(adjusted) and adjusted[i + 2] > 0:  # 信頼度チェック
+                    adjusted[i] += wrist_movement[0]
+                    adjusted[i + 1] += wrist_movement[1]
         
         return adjusted
     
