@@ -19,6 +19,11 @@ from .render_nodes import (
     ProportionChangerDWPoseRender
 )
 
+# Import params node classes
+from .params_node import (
+    ProportionChangerParams
+)
+
 __all__ = [
     # Detector nodes
     "ProportionChangerUniAnimateDWPoseDetector",
@@ -28,5 +33,8 @@ __all__ = [
     "ProportionChangerReference",
     
     # Render nodes
-    "ProportionChangerDWPoseRender"
+    "ProportionChangerDWPoseRender",
+    
+    # Params nodes
+    "ProportionChangerParams"
 ]
