@@ -103,10 +103,10 @@ class ProportionChangerUniAnimateDWPoseDetector:
         return (poses, reference_pose, )
 
 
-class ProportionChangerDWPoseDetectorForPoseKeypoint:
+class ProportionChangerDWPoseDetector:
     """
     DWPose detector node that extracts pose keypoints from image and outputs POSE_KEYPOINT format.
-    This node is designed to work with ProportionChangerUltimateUniAnimateDWPoseDetector.
+    This node is designed to work with ProportionChangerReference.
     Includes toe keypoints (19-24) which are essential for full pose estimation.
     """
     

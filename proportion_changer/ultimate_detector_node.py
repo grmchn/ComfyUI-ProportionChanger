@@ -12,11 +12,11 @@ from ..utils import (
 )
 
 
-class ProportionChangerUltimateUniAnimateDWPoseDetector:
+class ProportionChangerReference:
     @classmethod
     def INPUT_TYPES(s):
         return {"required": {
-                "pose_keypoints": ("POSE_KEYPOINT", {"tooltip": "Target pose keypoints"}),
+                "pose_keypoint": ("POSE_KEYPOINT", {"tooltip": "Target pose keypoints"}),
             },
             "optional": {
                 "reference_pose_keypoint": ("POSE_KEYPOINT", {"tooltip": "Reference pose keypoint"}),
@@ -24,16 +24,16 @@ class ProportionChangerUltimateUniAnimateDWPoseDetector:
         }
 
     RETURN_TYPES = ("POSE_KEYPOINT",)
-    RETURN_NAMES = ("processed_pose_keypoint",)
+    RETURN_NAMES = ("changed_pose_keypoint",)
     FUNCTION = "process"
     CATEGORY = "ProportionChanger"
 
-    def process(self, pose_keypoints, reference_pose_keypoint=None):
+    def process(self, pose_keypoint, reference_pose_keypoint=None):
         """
         Process POSE_KEYPOINT data using proportion changing algorithms
         """
         
-        if not pose_keypoints or len(pose_keypoints) == 0:
+        if not pose_keypoint or len(pose_keypoint) == 0:
             # Return empty keypoint data
             empty_person = {
                 "pose_keypoints_2d": [0.0] * 75,
@@ -44,12 +44,12 @@ class ProportionChangerUltimateUniAnimateDWPoseDetector:
             return ([{"people": [empty_person], "canvas_width": 512, "canvas_height": 768}],)
         
         # Get canvas dimensions from first frame
-        frame_data = pose_keypoints[0]
+        frame_data = pose_keypoint[0]
         canvas_width = frame_data.get('canvas_width', 512)
         canvas_height = frame_data.get('canvas_height', 768)
         
         # Convert POSE_KEYPOINT to DWPose format
-        pose_data = pose_keypoint_to_dwpose_format(pose_keypoints, canvas_width, canvas_height)
+        pose_data = pose_keypoint_to_dwpose_format(pose_keypoint, canvas_width, canvas_height)
         ref_data = None
         ref_canvas_width, ref_canvas_height = canvas_width, canvas_height
         if reference_pose_keypoint is not None:

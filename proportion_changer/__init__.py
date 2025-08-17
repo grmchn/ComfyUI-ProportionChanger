@@ -6,12 +6,12 @@ Provides organized node classes for DWPose detection and rendering
 # Import detector node classes
 from .detector_nodes import (
     ProportionChangerUniAnimateDWPoseDetector,
-    ProportionChangerDWPoseDetectorForPoseKeypoint
+    ProportionChangerDWPoseDetector
 )
 
 # Import ultimate detector node class
 from .ultimate_detector_node import (
-    ProportionChangerUltimateUniAnimateDWPoseDetector
+    ProportionChangerReference
 )
 
 # Import render node classes
@@ -22,10 +22,10 @@ from .render_nodes import (
 __all__ = [
     # Detector nodes
     "ProportionChangerUniAnimateDWPoseDetector",
-    "ProportionChangerDWPoseDetectorForPoseKeypoint",
+    "ProportionChangerDWPoseDetector",
     
     # Ultimate detector node
-    "ProportionChangerUltimateUniAnimateDWPoseDetector",
+    "ProportionChangerReference",
     
     # Render nodes
     "ProportionChangerDWPoseRender"

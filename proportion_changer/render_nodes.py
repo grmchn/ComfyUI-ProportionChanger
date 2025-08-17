@@ -29,7 +29,7 @@ class ProportionChangerDWPoseRender:
                 "pose_marker_size": ("INT", {"default": 4, "min": 0, "max": 100, "tooltip": "Body keypoint marker size"}),
                 "face_marker_size": ("INT", {"default": 3, "min": 0, "max": 100, "tooltip": "Face keypoint marker size"}),
                 "hand_marker_size": ("INT", {"default": 2, "min": 0, "max": 100, "tooltip": "Hand keypoint marker size"}),
-                "POSE_KEYPOINT": ("POSE_KEYPOINT", {"default": None, "tooltip": "POSE_KEYPOINT data to render"}),
+                "pose_keypoint": ("POSE_KEYPOINT", {"default": None, "tooltip": "POSE_KEYPOINT data to render"}),
             },
         }
 
@@ -38,16 +38,16 @@ class ProportionChangerDWPoseRender:
     CATEGORY = "ProportionChanger"
 
     def render_img(self, show_body, show_face, show_hands, show_feet, resolution_x, 
-                   pose_marker_size, face_marker_size, hand_marker_size, POSE_KEYPOINT=None):
+                   pose_marker_size, face_marker_size, hand_marker_size, pose_keypoint=None):
         
-        if POSE_KEYPOINT is None:
-            raise ValueError("POSE_KEYPOINT input is required")
+        if pose_keypoint is None:
+            raise ValueError("pose_keypoint input is required")
         
-        # Debug: Print POSE_KEYPOINT structure
-        print(f"🔍 Debug POSE_KEYPOINT type: {type(POSE_KEYPOINT)}")
-        if isinstance(POSE_KEYPOINT, list) and len(POSE_KEYPOINT) > 0:
-            print(f"🔍 Debug POSE_KEYPOINT length: {len(POSE_KEYPOINT)}")
-            first_frame = POSE_KEYPOINT[0]
+        # Debug: Print pose_keypoint structure
+        print(f"🔍 Debug pose_keypoint type: {type(pose_keypoint)}")
+        if isinstance(pose_keypoint, list) and len(pose_keypoint) > 0:
+            print(f"🔍 Debug pose_keypoint length: {len(pose_keypoint)}")
+            first_frame = pose_keypoint[0]
             print(f"🔍 Debug first frame keys: {first_frame.keys() if isinstance(first_frame, dict) else 'Not a dict'}")
             if isinstance(first_frame, dict) and 'people' in first_frame:
                 print(f"🔍 Debug people count: {len(first_frame['people'])}")
@@ -62,12 +62,12 @@ class ProportionChangerDWPoseRender:
                                          for i in range(0, min(54, len(keypoints)), 3) 
                                          if keypoints[i] != 0 or keypoints[i+1] != 0]
                         print(f"🔍 Debug non-zero coordinates (first 5): {non_zero_coords[:5]}")
-        elif isinstance(POSE_KEYPOINT, dict):
-            print(f"🔍 Debug single frame keys: {POSE_KEYPOINT.keys()}")
+        elif isinstance(pose_keypoint, dict):
+            print(f"🔍 Debug single frame keys: {pose_keypoint.keys()}")
         
         # Render using DWPose algorithms
         pose_imgs = draw_dwpose_render(
-            POSE_KEYPOINT, resolution_x, show_body, show_face, show_hands, show_feet,
+            pose_keypoint, resolution_x, show_body, show_face, show_hands, show_feet,
             pose_marker_size, face_marker_size, hand_marker_size
         )
         
