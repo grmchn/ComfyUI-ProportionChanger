@@ -1,5 +1,5 @@
 """
-ProportionChanger Ultimate UniAnimate DWPose Detector node
+ProportionChanger Reference node
 Contains the complex proportion changing algorithm for pose transformation
 """
 
@@ -31,6 +31,7 @@ class ProportionChangerReference:
     def process(self, pose_keypoint, reference_pose_keypoint=None):
         """
         Process POSE_KEYPOINT data using proportion changing algorithms
+        Supports batch processing for multiple frames
         """
         
         if not pose_keypoint or len(pose_keypoint) == 0:
@@ -48,8 +49,7 @@ class ProportionChangerReference:
         canvas_width = frame_data.get('canvas_width', 512)
         canvas_height = frame_data.get('canvas_height', 768)
         
-        # Convert POSE_KEYPOINT to DWPose format
-        pose_data = pose_keypoint_to_dwpose_format(pose_keypoint, canvas_width, canvas_height)
+        # Prepare reference data if provided
         ref_data = None
         ref_canvas_width, ref_canvas_height = canvas_width, canvas_height
         if reference_pose_keypoint is not None:
@@ -60,22 +60,43 @@ class ProportionChangerReference:
             # Convert reference using its own canvas dimensions
             ref_data = pose_keypoint_to_dwpose_format(reference_pose_keypoint, ref_canvas_width, ref_canvas_height)
         
-        # Apply proportion changing algorithms (extracted from original code)
-        processed_pose = self.apply_proportion_changes(
-            pose_data, ref_data, 
-            canvas_width, canvas_height, ref_canvas_width, ref_canvas_height
-        )
+        # Process each frame in the batch
+        result_frames = []
+        for i, frame in enumerate(pose_keypoint):
+            # Convert single frame to DWPose format for processing
+            single_frame_data = [frame]
+            pose_data = pose_keypoint_to_dwpose_format(single_frame_data, canvas_width, canvas_height)
+            
+            # Apply proportion changing algorithms
+            processed_pose = self.apply_proportion_changes(
+                pose_data, ref_data, 
+                canvas_width, canvas_height, ref_canvas_width, ref_canvas_height
+            )
+            
+            # Convert back to POSE_KEYPOINT format
+            result_keypoint = dwpose_format_to_pose_keypoint(
+                processed_pose['bodies']['candidate'],
+                processed_pose['faces'],
+                processed_pose['hands'],
+                canvas_width,
+                canvas_height
+            )
+            
+            # Add the processed frame to results
+            # dwpose_format_to_pose_keypoint returns a single frame dict, not a list
+            if result_keypoint and isinstance(result_keypoint, dict):
+                result_frames.append(result_keypoint)
+            else:
+                # Fallback empty frame
+                empty_person = {
+                    "pose_keypoints_2d": [0.0] * 75,
+                    "face_keypoints_2d": [0.0] * 210,
+                    "hand_left_keypoints_2d": [0.0] * 63,
+                    "hand_right_keypoints_2d": [0.0] * 63
+                }
+                result_frames.append({"people": [empty_person], "canvas_width": canvas_width, "canvas_height": canvas_height})
         
-        # Convert back to POSE_KEYPOINT format
-        result_keypoint = dwpose_format_to_pose_keypoint(
-            processed_pose['bodies']['candidate'],
-            processed_pose['faces'],
-            processed_pose['hands'],
-            canvas_width,
-            canvas_height
-        )
-        
-        return (result_keypoint,)
+        return (result_frames,)
     
     def apply_proportion_changes(self, pose_data, ref_data, 
                                 canvas_width, canvas_height, ref_canvas_width, ref_canvas_height):
