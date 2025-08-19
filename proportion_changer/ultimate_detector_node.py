@@ -111,20 +111,16 @@ class ProportionChangerReference:
         # Simulate results_vis structure like WanVideo
         results_vis = batch_pose_data
         
-        # Apply canvas size scaling to reference data if needed
+        # Get reference data (canvas scaling is handled by coordinate conversion functions)
         ref_candidate = ref_data['bodies']['candidate'].copy()
         ref_faces = ref_data['faces'].copy() 
         ref_hands = ref_data['hands'].copy()
         
-        if ref_canvas_width != canvas_width or ref_canvas_height != canvas_height:
-            scale_x = canvas_width / ref_canvas_width
-            scale_y = canvas_height / ref_canvas_height
-            ref_candidate[:, 0] *= scale_x
-            ref_candidate[:, 1] *= scale_y
-            ref_faces[:, :, 0] *= scale_x
-            ref_faces[:, :, 1] *= scale_y
-            ref_hands[:, :, 0] *= scale_x
-            ref_hands[:, :, 1] *= scale_y
+        # NOTE: Canvas size scaling is NOT needed here because:
+        # 1. pose_keypoint_to_dwpose_format already converts to normalized coordinates (0-1)
+        # 2. Both target and reference are in the same normalized coordinate space
+        # 3. dwpose_format_to_pose_keypoint handles final canvas scaling automatically
+        # Adding canvas scaling here would result in double scaling!
         
         # Get first frame data
         bodies = results_vis[0]['bodies']
