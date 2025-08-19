@@ -157,6 +157,7 @@ class ProportionChangerParams:
         
         if all_default:
             # デフォルト値でも処理を実行（キャッシュされた変更済みデータではなく、元データから処理）
+            pass
         
         # POSE_KEYPOINTの形式を正規化 (dict形式の場合はリストに変換)
         # 重要：元のオブジェクトを絶対に変更しないよう、必ずdeep copyを作成
