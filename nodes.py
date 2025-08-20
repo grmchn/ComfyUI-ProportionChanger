@@ -12,7 +12,8 @@ from .proportion_changer import (
     ProportionChangerReference,
     ProportionChangerDWPoseDetector,
     ProportionChangerDWPoseRender,
-    ProportionChangerParams
+    ProportionChangerParams,
+    ProportionChangerInterpolator
 )
 
 
@@ -192,6 +193,7 @@ NODE_CLASS_MAPPINGS = {
     "ProportionChangerDWPoseDetector": ProportionChangerDWPoseDetector,
     "ProportionChangerDWPoseRender": ProportionChangerDWPoseRender,
     "ProportionChangerParams": ProportionChangerParams,
+    "ProportionChangerInterpolator": ProportionChangerInterpolator,
     
     # Utility nodes
     "PoseJSONToPoseKeypoint": PoseJSONToPoseKeypoint,
@@ -205,6 +207,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ProportionChangerDWPoseDetector": "ProportionChanger DWPose Detector",
     "ProportionChangerDWPoseRender": "ProportionChanger DWPose Render",
     "ProportionChangerParams": "ProportionChanger Params",
+    "ProportionChangerInterpolator": "ProportionChanger Interpolator",
     
     # Utility nodes
     "PoseJSONToPoseKeypoint": "pose_keypoint input",

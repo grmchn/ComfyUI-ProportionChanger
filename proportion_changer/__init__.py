@@ -24,6 +24,11 @@ from .params_node import (
     ProportionChangerParams
 )
 
+# Import interpolation node classes
+from .interpolation_node import (
+    ProportionChangerInterpolator
+)
+
 __all__ = [
     # Detector nodes
     "ProportionChangerUniAnimateDWPoseDetector",
@@ -36,5 +41,8 @@ __all__ = [
     "ProportionChangerDWPoseRender",
     
     # Params nodes
-    "ProportionChangerParams"
+    "ProportionChangerParams",
+    
+    # Interpolation nodes
+    "ProportionChangerInterpolator"
 ]
