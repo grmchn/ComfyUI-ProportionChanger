@@ -1,4 +1,3 @@
-
 import torch.nn as nn
 from ..utils import log
 import comfy.model_management as mm
@@ -970,612 +969,349 @@ def dwpose_format_to_pose_keypoint(candidate, faces, hands, canvas_width, canvas
     return frame_data
 
 
-class ProportionChangerUltimateUniAnimateDWPoseDetector:
-    @classmethod
-    def INPUT_TYPES(s):
-        return {"required": {
-                "pose_keypoints": ("POSE_KEYPOINT", {"tooltip": "Target pose keypoints"}),
-                "score_threshold": ("FLOAT", {"default": 0.3, "min": 0.0, "max": 1.0, "step": 0.01, "tooltip": "Score threshold for pose processing"}),
-            },
-            "optional": {
-                "reference_pose_keypoint": ("POSE_KEYPOINT", {"tooltip": "Reference pose keypoint"}),
-            },
-        }
-
-    RETURN_TYPES = ("POSE_KEYPOINT",)
-    RETURN_NAMES = ("processed_pose_keypoint",)
-    FUNCTION = "process"
-    CATEGORY = "ProportionChanger"
-
-    def process(self, pose_keypoints, score_threshold, reference_pose_keypoint=None):
+def get_input_from_references(pose_keypoint, reference_pose, face_eye_correction=True):
         """
-        Process POSE_KEYPOINT data using proportion changing algorithms
+        Calculate how to resize the given pose_keypoint based on reference pose
+        
+        Args:
+            pose_keypoint: Current POSE_KEYPOINT to resize
+            reference_pose: Reference POSE_KEYPOINT with target proportions
+            face_eye_correction: Whether to apply face eye correction
+        
+        Returns:
+            Dict with transformation parameters for resizing
         """
-        import numpy as np
+        import math
         
-        if not pose_keypoints or len(pose_keypoints) == 0:
-            # Return empty keypoint data
-            empty_person = {
-                "pose_keypoints_2d": [0.0] * 75,
-                "face_keypoints_2d": [0.0] * 210,
-                "hand_left_keypoints_2d": [0.0] * 63,
-                "hand_right_keypoints_2d": [0.0] * 63
-            }
-            return ([{"people": [empty_person], "canvas_width": 512, "canvas_height": 768}],)
+        if not reference_pose or len(reference_pose) == 0:
+            return None
         
-        # Get canvas dimensions from first frame
-        frame_data = pose_keypoints[0]
-        canvas_width = frame_data.get('canvas_width', 512)
-        canvas_height = frame_data.get('canvas_height', 768)
+        ref_frame = reference_pose[0]
+        ref_people = ref_frame.get('people', [])
         
-        # Convert POSE_KEYPOINT to DWPose format
-        pose_data = pose_keypoint_to_dwpose_format(pose_keypoints, canvas_width, canvas_height)
-        ref_data = None
-        if reference_pose_keypoint is not None:
-            ref_data = pose_keypoint_to_dwpose_format(reference_pose_keypoint, canvas_width, canvas_height)
-        
-        # Apply proportion changing algorithms (extracted from original code)
-        processed_pose = self.apply_proportion_changes(pose_data, ref_data, score_threshold)
-        
-        # Convert back to POSE_KEYPOINT format
-        result_keypoint = dwpose_format_to_pose_keypoint(
-            processed_pose['bodies']['candidate'],
-            processed_pose['faces'],
-            processed_pose['hands'],
-            canvas_width,
-            canvas_height
-        )
-        
-        return (result_keypoint,)
-    
-    def apply_proportion_changes(self, pose_data, ref_data, score_threshold):
-        """
-        Apply proportion changing algorithms from the original DWPose detector
-        Complete 1:1 port from pose_extract function (lines 241-500+) in WanVideoWrapper
-        
-        DWPose Body Keypoint Structure:
-        0: Nose, 1: Left Eye, 2: Right Eye, 3: Left Ear, 4: Right Ear,
-        5: Left Shoulder, 6: Right Shoulder, 7: Left Elbow, 8: Right Elbow,
-        9: Left Wrist, 10: Right Wrist, 11: Left Hip, 12: Right Hip,
-        13: Left Knee, 14: Right Knee, 15: Left Ankle, 16: Right Ankle,
-        17-24: Foot keypoints (refer to CLAUDE.md for detailed mapping)
-        """
-        import numpy as np
-        
-        # Get candidate and subset from pose data
-        candidate = pose_data['bodies']['candidate']
-        faces = pose_data['faces']
-        hands = pose_data['hands']
-        
-        if len(candidate) == 0:
-            return pose_data
-        
-        # If reference data is provided, apply proportion changes
-        if ref_data is not None and len(ref_data['bodies']['candidate']) > 0:
-            ref_candidate = ref_data['bodies']['candidate']
-            ref_faces = ref_data['faces']
-            ref_hands = ref_data['hands']
+        if len(ref_people) == 0:
+            return None
             
-            # Complete algorithm port from original lines 241-500+
-            ref_2_x = ref_candidate[2][0]
-            ref_2_y = ref_candidate[2][1]
-            ref_5_x = ref_candidate[5][0]
-            ref_5_y = ref_candidate[5][1]
-            ref_8_x = ref_candidate[8][0]
-            ref_8_y = ref_candidate[8][1]
-            ref_11_x = ref_candidate[11][0]
-            ref_11_y = ref_candidate[11][1]
-            ref_center1 = 0.5*(ref_candidate[2]+ref_candidate[5])
-            ref_center2 = 0.5*(ref_candidate[8]+ref_candidate[11])
-
-            zero_2_x = candidate[2][0]
-            zero_2_y = candidate[2][1]
-            zero_5_x = candidate[5][0]
-            zero_5_y = candidate[5][1]
-            zero_8_x = candidate[8][0]
-            zero_8_y = candidate[8][1]
-            zero_11_x = candidate[11][0]
-            zero_11_y = candidate[11][1]
-            zero_center1 = 0.5*(candidate[2]+candidate[5])
-            zero_center2 = 0.5*(candidate[8]+candidate[11])
-
-            x_ratio = (ref_5_x-ref_2_x)/(zero_5_x-zero_2_x)
-            y_ratio = (ref_center2[1]-ref_center1[1])/(zero_center2[1]-zero_center1[1])
-
-            candidate[:,0] *= x_ratio
-            candidate[:,1] *= y_ratio
-            hands[:,:,0] *= x_ratio
-            hands[:,:,1] *= y_ratio
+        ref_person = ref_people[0]
+        ref_body_kpts = ref_person.get('pose_keypoints_2d', [])
+        ref_face_kpts = ref_person.get('face_keypoints_2d', [])
+        
+        # Extract reference keypoints (assuming normalized coordinates)
+        if len(ref_body_kpts) < 75:  # 25 * 3
+            return None
             
-            # Face scaling with independent X and Y scaling based on reference proportions
-            if len(candidate) >= 16 and len(ref_candidate) >= 16 and len(faces) > 0 and faces.shape[1] > 30:
-                # Store original face data before any scaling
-                original_faces = faces.copy()
+        ref_points = []
+        for i in range(25):
+            x = ref_body_kpts[i*3]
+            y = ref_body_kpts[i*3+1]
+            conf = ref_body_kpts[i*3+2]
+            ref_points.append([x, y, conf])
+        
+        # Eye distance calculation (DWPose keypoints 14, 15)
+        ref_right_eye = ref_points[14]  # Right eye
+        ref_left_eye = ref_points[15]   # Left eye
+        
+        if ref_right_eye[2] <= 0 or ref_left_eye[2] <= 0:
+            return None
+        
+        ref_eye_distance = math.sqrt((ref_right_eye[0] - ref_left_eye[0])**2 + 
+                                   (ref_right_eye[1] - ref_left_eye[1])**2)
+        
+        if ref_eye_distance <= 0:
+            return None
+        
+        # If face_eye_correction is enabled, try to get more accurate eye positions from face keypoints
+        if face_eye_correction and len(ref_face_kpts) >= 210:  # 70 * 3
+            # Face keypoints: right eye center around index 36-41, left eye center around 42-47
+            # We'll use approximate centers
+            ref_face_points = []
+            for i in range(70):
+                x = ref_face_kpts[i*3]
+                y = ref_face_kpts[i*3+1]
+                conf = ref_face_kpts[i*3+2]
+                ref_face_points.append([x, y, conf])
+            
+            # Calculate more precise eye centers from face keypoints if available
+            try:
+                # Right eye center (face keypoints ~36-41)
+                right_eye_x = sum(ref_face_points[i][0] for i in range(36, 42) if ref_face_points[i][2] > 0) / 6
+                right_eye_y = sum(ref_face_points[i][1] for i in range(36, 42) if ref_face_points[i][2] > 0) / 6
                 
-                # Calculate reference and target proportions
-                # Use ACTUAL ears (keypoints 3,4) not knees!
-                ref_ear_distance = ((ref_candidate[3][0] - ref_candidate[4][0]) ** 2 + (ref_candidate[3][1] - ref_candidate[4][1]) ** 2) ** 0.5
-                target_ear_distance_original = ((candidate[3][0] - candidate[4][0]) ** 2 + (candidate[3][1] - candidate[4][1]) ** 2) ** 0.5
+                # Left eye center (face keypoints ~42-47) 
+                left_eye_x = sum(ref_face_points[i][0] for i in range(42, 48) if ref_face_points[i][2] > 0) / 6
+                left_eye_y = sum(ref_face_points[i][1] for i in range(42, 48) if ref_face_points[i][2] > 0) / 6
                 
-                if target_ear_distance_original > 0:
-                    # Calculate original face contour width (before any scaling)
-                    face_left_idx = 0   # Face contour left
-                    face_right_idx = 16 # Face contour right
-                    original_face_width = ((original_faces[0, face_right_idx, 0] - original_faces[0, face_left_idx, 0]) ** 2 + 
-                                          (original_faces[0, face_right_idx, 1] - original_faces[0, face_left_idx, 1]) ** 2) ** 0.5
+                face_eye_distance = math.sqrt((right_eye_x - left_eye_x)**2 + (right_eye_y - left_eye_y)**2)
+                
+                if face_eye_distance > 0:
+                    ref_eye_distance = face_eye_distance
+                    ref_right_eye = [right_eye_x, right_eye_y, 1.0]
+                    ref_left_eye = [left_eye_x, left_eye_y, 1.0]
                     
-                    # Reference face contour width
-                    ref_faces = ref_data['faces'] if ref_data else None
-                    if ref_faces is not None and len(ref_faces) > 0 and ref_faces.shape[1] > 16:
-                        ref_face_width = ((ref_faces[0, face_right_idx, 0] - ref_faces[0, face_left_idx, 0]) ** 2 + 
-                                         (ref_faces[0, face_right_idx, 1] - ref_faces[0, face_left_idx, 1]) ** 2) ** 0.5
-                        
-                        if ref_face_width > 0 and original_face_width > 0:
-                            # X scaling: match reference face proportion
-                            face_scale_ratio_x = ref_face_width / original_face_width
-                            
-                            # Y scaling: match reference face height proportion
-                            # Use nose tip (30) to chin (8) distance for face height
-                            nose_idx = 30
-                            chin_idx = 8
-                            
-                            # Calculate original face height
-                            if original_faces.shape[1] > max(nose_idx, chin_idx):
-                                original_face_height = ((original_faces[0, nose_idx, 1] - original_faces[0, chin_idx, 1]) ** 2 + 
-                                                       (original_faces[0, nose_idx, 0] - original_faces[0, chin_idx, 0]) ** 2) ** 0.5
-                                
-                                # Calculate reference face height
-                                ref_face_height = ((ref_faces[0, nose_idx, 1] - ref_faces[0, chin_idx, 1]) ** 2 + 
-                                                 (ref_faces[0, nose_idx, 0] - ref_faces[0, chin_idx, 0]) ** 2) ** 0.5
-                                
-                                if original_face_height > 0 and ref_face_height > 0:
-                                    face_scale_ratio_y = ref_face_height / original_face_height
-                                else:
-                                    # Fallback to ear distance ratio
-                                    face_scale_ratio_y = ref_ear_distance / target_ear_distance_original
-                            else:
-                                # Fallback to ear distance ratio
-                                face_scale_ratio_y = ref_ear_distance / target_ear_distance_original
-                        else:
-                            # Fallback to body ratios
-                            face_scale_ratio_x = x_ratio
-                            face_scale_ratio_y = y_ratio
-                    else:
-                        # Fallback to body ratios
-                        face_scale_ratio_x = x_ratio
-                        face_scale_ratio_y = y_ratio
-                    
-                    # Use face nose tip (keypoint 30) as reference for alignment
-                    face_nose_tip_idx = 30
-                    
-                    # Get current face nose position (before scaling)
-                    current_face_nose = original_faces[0, face_nose_tip_idx, :]
-                    
-                    # Scale faces relative to current face nose position with different X/Y ratios
-                    faces_centered = original_faces - current_face_nose[np.newaxis, np.newaxis, :]
-                    faces_centered[:, :, 0] *= face_scale_ratio_x  # X scaling
-                    faces_centered[:, :, 1] *= face_scale_ratio_y  # Y scaling
-                    
-                    # Apply scaling first (relative to original nose position)
-                    faces[:, :, :] = faces_centered + current_face_nose[np.newaxis, np.newaxis, :]
-                    
-                    # Align based on eye positions (most important for visual accuracy)
-                    body_nose_position = candidate[0]  # Body nose after scaling
-                    scaled_face_nose = faces[0, face_nose_tip_idx, :]  # Face nose after scaling
-                    
-                    # Calculate X offset to align nose positions
-                    x_offset_face = body_nose_position[0] - scaled_face_nose[0]
-                    
-                    # Calculate Y offset based on eye level alignment (most important!)
-                    # Use ACTUAL body eyes (keypoints 1,2) - not ear approximation!
-                    body_left_eye = candidate[1]   # Left Eye
-                    body_right_eye = candidate[2]  # Right Eye
-                    body_eye_center_y = (body_left_eye[1] + body_right_eye[1]) / 2.0
-                    
-                    # Calculate face eye center Y position (using eye keypoints 36-47 region average)
-                    if faces.shape[1] > 47:
-                        # Use left eye (36-41) and right eye (42-47) center
-                        left_eye_center_y = np.mean(faces[0, 36:42, 1])
-                        right_eye_center_y = np.mean(faces[0, 42:48, 1])
-                        face_eye_center_y = (left_eye_center_y + right_eye_center_y) / 2.0
-                        
-                        # Align face eye level with body eye level (EXACT match!)
-                        y_offset_face = body_eye_center_y - face_eye_center_y
-                    else:
-                        # Fallback to nose alignment if eye keypoints not available
-                        y_offset_face = body_nose_position[1] - scaled_face_nose[1]
-                    
-                    # Apply X and Y offsets independently
-                    faces[:, :, 0] += x_offset_face
-                    faces[:, :, 1] += y_offset_face
-                else:
-                    # Fallback to body scaling if ear distance calculation fails
-                    faces[:,:,0] *= x_ratio
-                    faces[:,:,1] *= y_ratio
-            else:
-                # Fallback to body scaling if ear keypoints or face data are not available
-                faces[:,:,0] *= x_ratio
-                faces[:,:,1] *= y_ratio
-            
-            ########neck########
-            l_neck_ref = ((ref_candidate[0][0] - ref_candidate[1][0]) ** 2 + (ref_candidate[0][1] - ref_candidate[1][1]) ** 2) ** 0.5
-            l_neck_0 = ((candidate[0][0] - candidate[1][0]) ** 2 + (candidate[0][1] - candidate[1][1]) ** 2) ** 0.5
-            neck_ratio = l_neck_ref / l_neck_0
-
-            x_offset_neck = (candidate[1][0]-candidate[0][0])*(1.-neck_ratio)
-            y_offset_neck = (candidate[1][1]-candidate[0][1])*(1.-neck_ratio)
-
-            candidate[0,0] += x_offset_neck
-            candidate[0,1] += y_offset_neck
-            candidate[14,0] += x_offset_neck
-            candidate[14,1] += y_offset_neck
-            candidate[15,0] += x_offset_neck
-            candidate[15,1] += y_offset_neck
-            candidate[16,0] += x_offset_neck
-            candidate[16,1] += y_offset_neck
-            candidate[17,0] += x_offset_neck
-            candidate[17,1] += y_offset_neck
-            
-            ########shoulder2########
-            l_shoulder2_ref = ((ref_candidate[2][0] - ref_candidate[1][0]) ** 2 + (ref_candidate[2][1] - ref_candidate[1][1]) ** 2) ** 0.5
-            l_shoulder2_0 = ((candidate[2][0] - candidate[1][0]) ** 2 + (candidate[2][1] - candidate[1][1]) ** 2) ** 0.5
-
-            shoulder2_ratio = l_shoulder2_ref / l_shoulder2_0
-
-            x_offset_shoulder2 = (candidate[1][0]-candidate[2][0])*(1.-shoulder2_ratio)
-            y_offset_shoulder2 = (candidate[1][1]-candidate[2][1])*(1.-shoulder2_ratio)
-
-            candidate[2,0] += x_offset_shoulder2
-            candidate[2,1] += y_offset_shoulder2
-            candidate[3,0] += x_offset_shoulder2
-            candidate[3,1] += y_offset_shoulder2
-            candidate[4,0] += x_offset_shoulder2
-            candidate[4,1] += y_offset_shoulder2
-            hands[1,:,0] += x_offset_shoulder2
-            hands[1,:,1] += y_offset_shoulder2
-
-            ########shoulder5########
-            l_shoulder5_ref = ((ref_candidate[5][0] - ref_candidate[1][0]) ** 2 + (ref_candidate[5][1] - ref_candidate[1][1]) ** 2) ** 0.5
-            l_shoulder5_0 = ((candidate[5][0] - candidate[1][0]) ** 2 + (candidate[5][1] - candidate[1][1]) ** 2) ** 0.5
-
-            shoulder5_ratio = l_shoulder5_ref / l_shoulder5_0
-
-            x_offset_shoulder5 = (candidate[1][0]-candidate[5][0])*(1.-shoulder5_ratio)
-            y_offset_shoulder5 = (candidate[1][1]-candidate[5][1])*(1.-shoulder5_ratio)
-
-            candidate[5,0] += x_offset_shoulder5
-            candidate[5,1] += y_offset_shoulder5
-            candidate[6,0] += x_offset_shoulder5
-            candidate[6,1] += y_offset_shoulder5
-            candidate[7,0] += x_offset_shoulder5
-            candidate[7,1] += y_offset_shoulder5
-            hands[0,:,0] += x_offset_shoulder5
-            hands[0,:,1] += y_offset_shoulder5
-
-            ########arm3########
-            l_arm3_ref = ((ref_candidate[3][0] - ref_candidate[2][0]) ** 2 + (ref_candidate[3][1] - ref_candidate[2][1]) ** 2) ** 0.5
-            l_arm3_0 = ((candidate[3][0] - candidate[2][0]) ** 2 + (candidate[3][1] - candidate[2][1]) ** 2) ** 0.5
-
-            arm3_ratio = l_arm3_ref / l_arm3_0
-
-            x_offset_arm3 = (candidate[2][0]-candidate[3][0])*(1.-arm3_ratio)
-            y_offset_arm3 = (candidate[2][1]-candidate[3][1])*(1.-arm3_ratio)
-
-            candidate[3,0] += x_offset_arm3
-            candidate[3,1] += y_offset_arm3
-            candidate[4,0] += x_offset_arm3
-            candidate[4,1] += y_offset_arm3
-            hands[1,:,0] += x_offset_arm3
-            hands[1,:,1] += y_offset_arm3
-
-            ########arm4########
-            l_arm4_ref = ((ref_candidate[4][0] - ref_candidate[3][0]) ** 2 + (ref_candidate[4][1] - ref_candidate[3][1]) ** 2) ** 0.5
-            l_arm4_0 = ((candidate[4][0] - candidate[3][0]) ** 2 + (candidate[4][1] - candidate[3][1]) ** 2) ** 0.5
-
-            arm4_ratio = l_arm4_ref / l_arm4_0
-
-            x_offset_arm4 = (candidate[3][0]-candidate[4][0])*(1.-arm4_ratio)
-            y_offset_arm4 = (candidate[3][1]-candidate[4][1])*(1.-arm4_ratio)
-
-            candidate[4,0] += x_offset_arm4
-            candidate[4,1] += y_offset_arm4
-            hands[1,:,0] += x_offset_arm4
-            hands[1,:,1] += y_offset_arm4
-
-            ########arm6########
-            l_arm6_ref = ((ref_candidate[6][0] - ref_candidate[5][0]) ** 2 + (ref_candidate[6][1] - ref_candidate[5][1]) ** 2) ** 0.5
-            l_arm6_0 = ((candidate[6][0] - candidate[5][0]) ** 2 + (candidate[6][1] - candidate[5][1]) ** 2) ** 0.5
-
-            arm6_ratio = l_arm6_ref / l_arm6_0
-
-            x_offset_arm6 = (candidate[5][0]-candidate[6][0])*(1.-arm6_ratio)
-            y_offset_arm6 = (candidate[5][1]-candidate[6][1])*(1.-arm6_ratio)
-
-            candidate[6,0] += x_offset_arm6
-            candidate[6,1] += y_offset_arm6
-            candidate[7,0] += x_offset_arm6
-            candidate[7,1] += y_offset_arm6
-            hands[0,:,0] += x_offset_arm6
-            hands[0,:,1] += y_offset_arm6
-
-            ########arm7########
-            l_arm7_ref = ((ref_candidate[7][0] - ref_candidate[6][0]) ** 2 + (ref_candidate[7][1] - ref_candidate[6][1]) ** 2) ** 0.5
-            l_arm7_0 = ((candidate[7][0] - candidate[6][0]) ** 2 + (candidate[7][1] - candidate[6][1]) ** 2) ** 0.5
-
-            arm7_ratio = l_arm7_ref / l_arm7_0
-
-            x_offset_arm7 = (candidate[6][0]-candidate[7][0])*(1.-arm7_ratio)
-            y_offset_arm7 = (candidate[6][1]-candidate[7][1])*(1.-arm7_ratio)
-
-            candidate[7,0] += x_offset_arm7
-            candidate[7,1] += y_offset_arm7
-            hands[0,:,0] += x_offset_arm7
-            hands[0,:,1] += y_offset_arm7
-
-            ########head14########
-            l_head14_ref = ((ref_candidate[14][0] - ref_candidate[0][0]) ** 2 + (ref_candidate[14][1] - ref_candidate[0][1]) ** 2) ** 0.5
-            l_head14_0 = ((candidate[14][0] - candidate[0][0]) ** 2 + (candidate[14][1] - candidate[0][1]) ** 2) ** 0.5
-
-            head14_ratio = l_head14_ref / l_head14_0
-
-            x_offset_head14 = (candidate[0][0]-candidate[14][0])*(1.-head14_ratio)
-            y_offset_head14 = (candidate[0][1]-candidate[14][1])*(1.-head14_ratio)
-
-            candidate[14,0] += x_offset_head14
-            candidate[14,1] += y_offset_head14
-            candidate[16,0] += x_offset_head14
-            candidate[16,1] += y_offset_head14
-
-            ########head15########
-            l_head15_ref = ((ref_candidate[15][0] - ref_candidate[0][0]) ** 2 + (ref_candidate[15][1] - ref_candidate[0][1]) ** 2) ** 0.5
-            l_head15_0 = ((candidate[15][0] - candidate[0][0]) ** 2 + (candidate[15][1] - candidate[0][1]) ** 2) ** 0.5
-
-            head15_ratio = l_head15_ref / l_head15_0
-
-            x_offset_head15 = (candidate[0][0]-candidate[15][0])*(1.-head15_ratio)
-            y_offset_head15 = (candidate[0][1]-candidate[15][1])*(1.-head15_ratio)
-
-            candidate[15,0] += x_offset_head15
-            candidate[15,1] += y_offset_head15
-            candidate[17,0] += x_offset_head15
-            candidate[17,1] += y_offset_head15
-
-            ########head16########
-            l_head16_ref = ((ref_candidate[16][0] - ref_candidate[14][0]) ** 2 + (ref_candidate[16][1] - ref_candidate[14][1]) ** 2) ** 0.5
-            l_head16_0 = ((candidate[16][0] - candidate[14][0]) ** 2 + (candidate[16][1] - candidate[14][1]) ** 2) ** 0.5
-
-            head16_ratio = l_head16_ref / l_head16_0
-
-            x_offset_head16 = (candidate[14][0]-candidate[16][0])*(1.-head16_ratio)
-            y_offset_head16 = (candidate[14][1]-candidate[16][1])*(1.-head16_ratio)
-
-            candidate[16,0] += x_offset_head16
-            candidate[16,1] += y_offset_head16
-
-            ########head17########
-            l_head17_ref = ((ref_candidate[17][0] - ref_candidate[15][0]) ** 2 + (ref_candidate[17][1] - ref_candidate[15][1]) ** 2) ** 0.5
-            l_head17_0 = ((candidate[17][0] - candidate[15][0]) ** 2 + (candidate[17][1] - candidate[15][1]) ** 2) ** 0.5
-
-            head17_ratio = l_head17_ref / l_head17_0
-
-            x_offset_head17 = (candidate[15][0]-candidate[17][0])*(1.-head17_ratio)
-            y_offset_head17 = (candidate[15][1]-candidate[17][1])*(1.-head17_ratio)
-
-            candidate[17,0] += x_offset_head17
-            candidate[17,1] += y_offset_head17
-            
-            ########left leg########
-            l_ll1_ref = ((ref_candidate[8][0] - ref_candidate[9][0]) ** 2 + (ref_candidate[8][1] - ref_candidate[9][1]) ** 2) ** 0.5
-            l_ll1_0 = ((candidate[8][0] - candidate[9][0]) ** 2 + (candidate[8][1] - candidate[9][1]) ** 2) ** 0.5
-            ll1_ratio = l_ll1_ref / l_ll1_0
-
-            x_offset_ll1 = (candidate[9][0]-candidate[8][0])*(ll1_ratio-1.)
-            y_offset_ll1 = (candidate[9][1]-candidate[8][1])*(ll1_ratio-1.)
-
-            candidate[9,0] += x_offset_ll1
-            candidate[9,1] += y_offset_ll1
-            candidate[10,0] += x_offset_ll1
-            candidate[10,1] += y_offset_ll1
-            candidate[19,0] += x_offset_ll1
-            candidate[19,1] += y_offset_ll1
-
-            l_ll2_ref = ((ref_candidate[9][0] - ref_candidate[10][0]) ** 2 + (ref_candidate[9][1] - ref_candidate[10][1]) ** 2) ** 0.5
-            l_ll2_0 = ((candidate[9][0] - candidate[10][0]) ** 2 + (candidate[9][1] - candidate[10][1]) ** 2) ** 0.5
-            ll2_ratio = l_ll2_ref / l_ll2_0
-
-            x_offset_ll2 = (candidate[10][0]-candidate[9][0])*(ll2_ratio-1.)
-            y_offset_ll2 = (candidate[10][1]-candidate[9][1])*(ll2_ratio-1.)
-
-            candidate[10,0] += x_offset_ll2
-            candidate[10,1] += y_offset_ll2
-            candidate[19,0] += x_offset_ll2
-            candidate[19,1] += y_offset_ll2
-
-            ########right leg########
-            l_rl1_ref = ((ref_candidate[11][0] - ref_candidate[12][0]) ** 2 + (ref_candidate[11][1] - ref_candidate[12][1]) ** 2) ** 0.5
-            l_rl1_0 = ((candidate[11][0] - candidate[12][0]) ** 2 + (candidate[11][1] - candidate[12][1]) ** 2) ** 0.5
-            rl1_ratio = l_rl1_ref / l_rl1_0
-
-            x_offset_rl1 = (candidate[12][0]-candidate[11][0])*(rl1_ratio-1.)
-            y_offset_rl1 = (candidate[12][1]-candidate[11][1])*(rl1_ratio-1.)
-
-            candidate[12,0] += x_offset_rl1
-            candidate[12,1] += y_offset_rl1
-            candidate[13,0] += x_offset_rl1
-            candidate[13,1] += y_offset_rl1
-            candidate[18,0] += x_offset_rl1
-            candidate[18,1] += y_offset_rl1
-
-            l_rl2_ref = ((ref_candidate[12][0] - ref_candidate[13][0]) ** 2 + (ref_candidate[12][1] - ref_candidate[13][1]) ** 2) ** 0.5
-            l_rl2_0 = ((candidate[12][0] - candidate[13][0]) ** 2 + (candidate[12][1] - candidate[13][1]) ** 2) ** 0.5
-            rl2_ratio = l_rl2_ref / l_rl2_0
-
-            x_offset_rl2 = (candidate[13][0]-candidate[12][0])*(rl2_ratio-1.)
-            y_offset_rl2 = (candidate[13][1]-candidate[12][1])*(rl2_ratio-1.)
-
-            candidate[13,0] += x_offset_rl2
-            candidate[13,1] += y_offset_rl2
-            candidate[18,0] += x_offset_rl2
-            candidate[18,1] += y_offset_rl2
-
-            # Final offset to align neck positions (line 496 in original)
-            offset = ref_candidate[1] - candidate[1]
-
-            candidate += offset[np.newaxis, :]
-            hands += offset[np.newaxis, np.newaxis, :]
-            
-            # Face offset: maintain nose alignment instead of neck alignment
-            if len(faces) > 0 and faces.shape[1] > 30:
-                # Calculate offset to keep face nose aligned with body nose
-                face_nose_tip_idx = 30
-                current_face_nose = faces[0, face_nose_tip_idx, :]
-                body_nose_after_offset = candidate[0]  # Body nose after offset
-                face_offset = body_nose_after_offset - current_face_nose
-                faces += face_offset[np.newaxis, np.newaxis, :]
-            else:
-                # Fallback: apply same offset as body
-                faces += offset[np.newaxis, np.newaxis, :]
+            except (IndexError, ZeroDivisionError):
+                # Fall back to body keypoints if face processing fails
+                pass
         
         return {
-            'bodies': {
-                'candidate': candidate,
-                'subset': pose_data['bodies']['subset']
-            },
-            'faces': faces,
-            'hands': hands
+            'eye_distance': ref_eye_distance,
+            'right_eye': ref_right_eye,
+            'left_eye': ref_left_eye,
+            'reference_points': ref_points
         }
 
 
-class ProportionChangerDWPoseDetectorForPoseKeypoint:
+def process_proportions_with_reference(pose_keypoint, reference_data, score_threshold=0.3, face_eye_correction=True):
     """
-    DWPose detector node that extracts pose keypoints from image and outputs POSE_KEYPOINT format.
-    This node is designed to work with ProportionChangerUltimateUniAnimateDWPoseDetector.
-    Includes toe keypoints (19-24) which are essential for full pose estimation.
+    Process pose proportions using reference data
+    
+    Args:
+        pose_keypoint: Current pose keypoint data to modify
+        reference_data: Reference transformation data from get_input_from_references()
+        score_threshold: Confidence threshold for processing keypoints  
+        face_eye_correction: Whether face eye correction was used in reference
+    
+    Returns:
+        Modified pose_keypoint with adjusted proportions
     """
+    import math
+    import copy
     
-    @classmethod
-    def INPUT_TYPES(s):
-        return {"required": {
-                "image": ("IMAGE", {"tooltip": "Input image for pose detection"}),
-                "score_threshold": ("FLOAT", {"default": 0.3, "min": 0.0, "max": 1.0, "step": 0.01, "tooltip": "Score threshold for pose detection"}),
-            }
-        }
-
-    RETURN_TYPES = ("POSE_KEYPOINT",)
-    RETURN_NAMES = ("pose_keypoint",)
-    FUNCTION = "detect_pose"
-    CATEGORY = "ProportionChanger"
-
-    def detect_pose(self, image, score_threshold):
-        device = mm.get_torch_device()
-        
-        # Model loading
-        dw_pose_model = "dw-ll_ucoco_384_bs5.torchscript.pt"
-        yolo_model = "yolox_l.torchscript.pt"
-
-        script_directory = os.path.dirname(os.path.abspath(__file__))
-        model_base_path = os.path.join(script_directory, "models", "DWPose")
-
-        model_det = os.path.join(model_base_path, yolo_model)
-        model_pose = os.path.join(model_base_path, dw_pose_model)
-
-        # Download models if not exists
-        if not os.path.exists(model_det):
-            log.info(f"Downloading yolo model to: {model_base_path}")
-            from huggingface_hub import snapshot_download
-            snapshot_download(repo_id="hr16/yolox-onnx", 
-                                allow_patterns=[f"*{yolo_model}*"],
-                                local_dir=model_base_path, 
-                                local_dir_use_symlinks=False)
-            
-        if not os.path.exists(model_pose):
-            log.info(f"Downloading dwpose model to: {model_base_path}")
-            from huggingface_hub import snapshot_download
-            snapshot_download(repo_id="hr16/DWPose-TorchScript-BatchSize5", 
-                                allow_patterns=[f"*{dw_pose_model}*"],
-                                local_dir=model_base_path, 
-                                local_dir_use_symlinks=False)
-
-        # Initialize JIT models
-        if not hasattr(self, "det") or not hasattr(self, "pose"):
-            self.det = torch.jit.load(model_det, map_location=device)
-            self.pose = torch.jit.load(model_pose, map_location=device)
-            self.dwpose_detector = DWposeDetector(self.det, self.pose) 
-
-        # Process image using the same approach as working UniAnimate detector
-        height, width = image.shape[1:3]
-        image_np = image.cpu().numpy() * 255
-        
-        pose_keypoints = []
-        comfy_pbar = ProgressBar(len(image_np))
-        
-        for i, img in enumerate(image_np):
-            try:
-                # Use the high-level DWPose detector call (same as working UniAnimate version)
-                pose = self.dwpose_detector(img, score_threshold=score_threshold)
-                
-                # Convert to POSE_KEYPOINT format using actual canvas dimensions
-                pose_keypoint_frame = dwpose_format_to_pose_keypoint(
-                    pose['bodies']['candidate'], 
-                    pose['faces'], 
-                    pose['hands'], 
-                    width,  # Use actual canvas width for pixel coordinates
-                    height  # Use actual canvas height for pixel coordinates
-                )
-                
-                # Add canvas size info for compatibility
-                pose_keypoint_frame["canvas_width"] = width
-                pose_keypoint_frame["canvas_height"] = height
-                pose_keypoints.append(pose_keypoint_frame)
-                
-            except Exception as e:
-                # Create empty pose data for failed detection
-                empty_pose = {
-                    "version": "1.0",
-                    "people": [],
-                    "canvas_width": width,
-                    "canvas_height": height
-                }
-                pose_keypoints.append(empty_pose)
-            
-            comfy_pbar.update(1)
-
-        return (pose_keypoints,)
+    if not pose_keypoint or len(pose_keypoint) == 0 or not reference_data:
+        return pose_keypoint
     
-    def _normalize_pose_coordinates(self, pose_keypoint, canvas_width, canvas_height):
+    frame_data = pose_keypoint[0]
+    people = frame_data.get('people', [])
+    
+    if len(people) == 0:
+        return pose_keypoint
+    
+    person = people[0]
+    body_kpts = person.get('pose_keypoints_2d', [])
+    face_kpts = person.get('face_keypoints_2d', [])
+    
+    if len(body_kpts) < 75:  # 25 * 3
+        return pose_keypoint
+    
+    # Extract current pose points
+    current_points = []
+    for i in range(25):
+        x = body_kpts[i*3]
+        y = body_kpts[i*3+1]
+        conf = body_kpts[i*3+2]
+        current_points.append([x, y, conf])
+    
+    # Get current eye positions (DWPose keypoints 14, 15)
+    current_right_eye = current_points[14]  # Right eye
+    current_left_eye = current_points[15]   # Left eye
+    
+    if current_right_eye[2] <= score_threshold or current_left_eye[2] <= score_threshold:
+        return pose_keypoint
+    
+    current_eye_distance = math.sqrt((current_right_eye[0] - current_left_eye[0])**2 + 
+                                   (current_right_eye[1] - current_left_eye[1])**2)
+    
+    if current_eye_distance <= 0:
+        return pose_keypoint
+    
+    # Apply face eye correction if enabled
+    if face_eye_correction and len(face_kpts) >= 210:  # 70 * 3
+        current_face_points = []
+        for i in range(70):
+            x = face_kpts[i*3]
+            y = face_kpts[i*3+1]
+            conf = face_kpts[i*3+2]
+            current_face_points.append([x, y, conf])
+        
+        try:
+            # Calculate face-based eye centers
+            right_eye_x = sum(current_face_points[i][0] for i in range(36, 42) if current_face_points[i][2] > score_threshold) / 6
+            right_eye_y = sum(current_face_points[i][1] for i in range(36, 42) if current_face_points[i][2] > score_threshold) / 6
+            
+            left_eye_x = sum(current_face_points[i][0] for i in range(42, 48) if current_face_points[i][2] > score_threshold) / 6
+            left_eye_y = sum(current_face_points[i][1] for i in range(42, 48) if current_face_points[i][2] > score_threshold) / 6
+            
+            face_eye_distance = math.sqrt((right_eye_x - left_eye_x)**2 + (right_eye_y - left_eye_y)**2)
+            
+            if face_eye_distance > 0:
+                current_eye_distance = face_eye_distance
+                current_right_eye = [right_eye_x, right_eye_y, 1.0]
+                current_left_eye = [left_eye_x, left_eye_y, 1.0]
+                
+        except (IndexError, ZeroDivisionError):
+            # Fall back to body keypoints if face processing fails
+            pass
+    
+    # Calculate scaling factor based on eye distance
+    scale_factor = reference_data['eye_distance'] / current_eye_distance
+    
+    # Calculate eye center for scaling origin
+    current_eye_center_x = (current_right_eye[0] + current_left_eye[0]) / 2
+    current_eye_center_y = (current_right_eye[1] + current_left_eye[1]) / 2
+    
+    # Apply scaling to all body keypoints
+    modified_body_kpts = copy.deepcopy(body_kpts)
+    
+    for i in range(25):
+        idx = i * 3
+        if body_kpts[idx + 2] > score_threshold:  # confidence check
+            # Scale relative to eye center
+            scaled_x = current_eye_center_x + (body_kpts[idx] - current_eye_center_x) * scale_factor
+            scaled_y = current_eye_center_y + (body_kpts[idx + 1] - current_eye_center_y) * scale_factor
+            
+            modified_body_kpts[idx] = scaled_x
+            modified_body_kpts[idx + 1] = scaled_y
+    
+    # Apply same scaling to hands and face keypoints
+    modified_face_kpts = copy.deepcopy(face_kpts)
+    for i in range(70):
+        idx = i * 3
+        if len(face_kpts) > idx + 2 and face_kpts[idx + 2] > score_threshold:
+            scaled_x = current_eye_center_x + (face_kpts[idx] - current_eye_center_x) * scale_factor
+            scaled_y = current_eye_center_y + (face_kpts[idx + 1] - current_eye_center_y) * scale_factor
+            
+            modified_face_kpts[idx] = scaled_x
+            modified_face_kpts[idx + 1] = scaled_y
+    
+    # Apply scaling to hand keypoints
+    lhand_kpts = person.get('hand_left_keypoints_2d', [])
+    rhand_kpts = person.get('hand_right_keypoints_2d', [])
+    
+    modified_lhand_kpts = copy.deepcopy(lhand_kpts)
+    for i in range(21):
+        idx = i * 3
+        if len(lhand_kpts) > idx + 2 and lhand_kpts[idx + 2] > score_threshold:
+            scaled_x = current_eye_center_x + (lhand_kpts[idx] - current_eye_center_x) * scale_factor
+            scaled_y = current_eye_center_y + (lhand_kpts[idx + 1] - current_eye_center_y) * scale_factor
+            
+            modified_lhand_kpts[idx] = scaled_x
+            modified_lhand_kpts[idx + 1] = scaled_y
+    
+    modified_rhand_kpts = copy.deepcopy(rhand_kpts)
+    for i in range(21):
+        idx = i * 3
+        if len(rhand_kpts) > idx + 2 and rhand_kpts[idx + 2] > score_threshold:
+            scaled_x = current_eye_center_x + (rhand_kpts[idx] - current_eye_center_x) * scale_factor
+            scaled_y = current_eye_center_y + (rhand_kpts[idx + 1] - current_eye_center_y) * scale_factor
+            
+            modified_rhand_kpts[idx] = scaled_x
+            modified_rhand_kpts[idx + 1] = scaled_y
+    
+    # Create modified pose keypoint data
+    modified_pose = copy.deepcopy(pose_keypoint)
+    modified_pose[0]['people'][0]['pose_keypoints_2d'] = modified_body_kpts
+    modified_pose[0]['people'][0]['face_keypoints_2d'] = modified_face_kpts
+    modified_pose[0]['people'][0]['hand_left_keypoints_2d'] = modified_lhand_kpts
+    modified_pose[0]['people'][0]['hand_right_keypoints_2d'] = modified_rhand_kpts
+    
+    return modified_pose
+
+
+def normalize_pose_keypoint_coordinates(pose_keypoint, target_canvas_width=1.0, target_canvas_height=1.0):
+    """
+    Normalize POSE_KEYPOINT coordinates to specified canvas dimensions
+    
+    Args:
+        pose_keypoint: POSE_KEYPOINT data to normalize
+        target_canvas_width: Target canvas width (1.0 for normalized coordinates)
+        target_canvas_height: Target canvas height (1.0 for normalized coordinates)
+    
+    Returns:
+        Normalized pose_keypoint data
+    """
+    import copy
+    
+    if not pose_keypoint or len(pose_keypoint) == 0:
+        return pose_keypoint
+    
+    frame_data = pose_keypoint[0]
+    current_width = frame_data.get('canvas_width', 1.0)
+    current_height = frame_data.get('canvas_height', 1.0)
+    
+    # No need to normalize if already at target dimensions
+    if current_width == target_canvas_width and current_height == target_canvas_height:
+        return pose_keypoint
+    
+    # Calculate scale factors
+    scale_x = target_canvas_width / current_width if current_width > 0 else 1.0
+    scale_y = target_canvas_height / current_height if current_height > 0 else 1.0
+    
+    normalized_pose = copy.deepcopy(pose_keypoint)
+    
+    for person in normalized_pose[0].get('people', []):
+        # Normalize body keypoints
+        body_kpts = person.get('pose_keypoints_2d', [])
+        for i in range(0, len(body_kpts), 3):
+            if i + 1 < len(body_kpts):
+                body_kpts[i] *= scale_x        # x coordinate
+                body_kpts[i+1] *= scale_y      # y coordinate
+                # confidence stays the same
+        
+        # Normalize face keypoints
+        face_kpts = person.get('face_keypoints_2d', [])
+        for i in range(0, len(face_kpts), 3):
+            if i + 1 < len(face_kpts):
+                face_kpts[i] *= scale_x
+                face_kpts[i+1] *= scale_y
+        
+        # Normalize hand keypoints
+        for hand_key in ['hand_left_keypoints_2d', 'hand_right_keypoints_2d']:
+            hand_kpts = person.get(hand_key, [])
+            for i in range(0, len(hand_kpts), 3):
+                if i + 1 < len(hand_kpts):
+                    hand_kpts[i] *= scale_x
+                    hand_kpts[i+1] *= scale_y
+    
+    # Update canvas dimensions
+    normalized_pose[0]['canvas_width'] = target_canvas_width
+    normalized_pose[0]['canvas_height'] = target_canvas_height
+    
+    return normalized_pose
+
+
+def apply_canvas_size_scaling_to_coordinates(pose_keypoint, canvas_width, canvas_height):
         """
-        Normalize pose coordinates from pixel values to 0-1 range
+        Apply canvas size scaling to POSE_KEYPOINT coordinate values
+        
+        Args:
+            pose_keypoint: POSE_KEYPOINT data (normalized 0-1 coordinates expected)
+            canvas_width: Target canvas width for coordinate scaling
+            canvas_height: Target canvas height for coordinate scaling
+        
+        Returns:
+            pose_keypoint with coordinates scaled to canvas size
         """
-        if not pose_keypoint or "people" not in pose_keypoint:
+        import copy
+        
+        if not pose_keypoint or len(pose_keypoint) == 0:
             return pose_keypoint
         
-        for person in pose_keypoint["people"]:
-            # Normalize body keypoints
-            if "pose_keypoints_2d" in person:
-                body_kpts = person["pose_keypoints_2d"]
-                for i in range(0, len(body_kpts), 3):
-                    if i+1 < len(body_kpts):
-                        body_kpts[i] = body_kpts[i] / canvas_width      # x coordinate
-                        body_kpts[i+1] = body_kpts[i+1] / canvas_height  # y coordinate
-            
-            # Normalize face keypoints
-            if "face_keypoints_2d" in person:
-                face_kpts = person["face_keypoints_2d"]
-                for i in range(0, len(face_kpts), 3):
-                    if i+1 < len(face_kpts):
-                        face_kpts[i] = face_kpts[i] / canvas_width
-                        face_kpts[i+1] = face_kpts[i+1] / canvas_height
-            
-            # Normalize hand keypoints
-            for hand_key in ["hand_left_keypoints_2d", "hand_right_keypoints_2d"]:
-                if hand_key in person:
-                    hand_kpts = person[hand_key]
-                    for i in range(0, len(hand_kpts), 3):
-                        if i+1 < len(hand_kpts):
-                            hand_kpts[i] = hand_kpts[i] / canvas_width
-                            hand_kpts[i+1] = hand_kpts[i+1] / canvas_height
+        scaled_pose = copy.deepcopy(pose_keypoint)
         
-        return pose_keypoint
+        for person in scaled_pose[0].get('people', []):
+            # Scale body keypoints  
+            body_kpts = person.get('pose_keypoints_2d', [])
+            for i in range(0, len(body_kpts), 3):
+                if i + 1 < len(body_kpts):
+                    body_kpts[i] *= canvas_width        # x coordinate  
+                    body_kpts[i+1] *= canvas_height     # y coordinate
+                    # confidence stays the same
+            
+            # Scale face keypoints
+            face_kpts = person.get('face_keypoints_2d', [])
+            for i in range(0, len(face_kpts), 3):
+                if i + 1 < len(face_kpts):
+                    face_kpts[i] *= canvas_width
+                    face_kpts[i+1] *= canvas_height
+            
+            # Scale hand keypoints
+            for hand_key in ['hand_left_keypoints_2d', 'hand_right_keypoints_2d']:
+                hand_kpts = person.get(hand_key, [])
+                for i in range(0, len(hand_kpts), 3):
+                    if i + 1 < len(hand_kpts):
+                        hand_kpts[i] *= canvas_width
+                        hand_kpts[i+1] *= canvas_height
+        
+        return scaled_pose
 
 
 def draw_dwpose_render(pose_keypoint, resolution_x, show_body, show_face, show_hands, show_feet, 
@@ -1623,288 +1359,136 @@ def draw_dwpose_render(pose_keypoint, resolution_x, show_body, show_face, show_h
         # Create canvas
         canvas = np.zeros((H_scaled, W_scaled, 3), dtype=np.uint8)
         
-        # Process each person in the frame
+        # Process each person
         for person in frame_data['people']:
-            # Draw body keypoints
-            if show_body and 'pose_keypoints_2d' in person:
-                canvas = draw_dwpose_body_and_foot(canvas, person['pose_keypoints_2d'], 
-                                                   W_scaled, H_scaled, pose_marker_size, show_feet)
+            if show_body:
+                canvas = draw_body_dwpose_render(canvas, person, W, H, W_scaled, H_scaled, pose_marker_size, show_feet)
             
-            # Draw hand keypoints
+            if show_face:
+                canvas = draw_face_dwpose_render(canvas, person, W, H, W_scaled, H_scaled, face_marker_size)
+            
             if show_hands:
-                if 'hand_left_keypoints_2d' in person:
-                    canvas = draw_dwpose_handpose(canvas, person['hand_left_keypoints_2d'], 
-                                                  W_scaled, H_scaled, hand_marker_size)
-                if 'hand_right_keypoints_2d' in person:
-                    canvas = draw_dwpose_handpose(canvas, person['hand_right_keypoints_2d'], 
-                                                  W_scaled, H_scaled, hand_marker_size)
-            
-            # Draw face keypoints
-            if show_face and 'face_keypoints_2d' in person:
-                canvas = draw_dwpose_facepose(canvas, person['face_keypoints_2d'], 
-                                              W_scaled, H_scaled, face_marker_size)
+                canvas = draw_hands_dwpose_render(canvas, person, W, H, W_scaled, H_scaled, hand_marker_size)
         
         pose_imgs.append(canvas)
     
     return pose_imgs
 
 
-def draw_dwpose_body_and_foot(canvas, body_keypoints, W, H, pose_marker_size, show_feet):
+def draw_body_dwpose_render(canvas, person, orig_w, orig_h, scaled_w, scaled_h, marker_size, show_feet):
     """
-    Draw body and foot keypoints using DWPose style (25-point support)
-    Based on WanVideo DWPose draw_body_and_foot function
+    Draw body keypoints with DWPose 25-point structure including toe keypoints
     """
     import cv2
-    import math
     
-    if not body_keypoints or len(body_keypoints) < 54:  # At least 18 points * 3
+    body_kpts = person.get('pose_keypoints_2d', [])
+    if len(body_kpts) < 75:  # 25 points * 3
         return canvas
     
-    # Define limb connections (bone structure)
-    if show_feet and len(body_keypoints) >= 75:  # 25 points * 3
-        # DWPose 25-point with toe connections
-        limbSeq = [[2, 3], [2, 6], [3, 4], [4, 5], [6, 7], [7, 8], [2, 9], [9, 10], 
-                   [10, 11], [2, 12], [12, 13], [13, 14], [2, 1], [1, 15], [15, 17], 
-                   [1, 16], [16, 18], [14, 19], [11, 20]]  # Added toe connections
-    else:
-        # Standard 18-point OpenPose
-        limbSeq = [[2, 3], [2, 6], [3, 4], [4, 5], [6, 7], [7, 8], [2, 9], [9, 10], 
-                   [10, 11], [2, 12], [12, 13], [13, 14], [2, 1], [1, 15], [15, 17], 
-                   [1, 16], [16, 18]]
+    # Scale factors
+    scale_x = scaled_w / orig_w if orig_w > 0 else 1.0
+    scale_y = scaled_h / orig_h if orig_h > 0 else 1.0
     
-    # Color palette for bones
-    colors = [[255, 0, 0], [255, 85, 0], [255, 170, 0], [255, 255, 0], [170, 255, 0], [85, 255, 0], [0, 255, 0],
-              [0, 255, 85], [0, 255, 170], [0, 255, 255], [0, 170, 255], [0, 85, 255], [0, 0, 255], [85, 0, 255],
-              [170, 0, 255], [255, 0, 255], [255, 0, 170], [255, 0, 85], [170, 255, 255], [255, 255, 0]]
+    # Extract keypoints
+    points = []
+    for i in range(25):
+        x = body_kpts[i*3] * scale_x
+        y = body_kpts[i*3+1] * scale_y
+        conf = body_kpts[i*3+2]
+        points.append([x, y, conf])
     
-    # First pass: determine coordinate system by checking all coordinates
-    max_coord = 0
-    for i in range(0, len(body_keypoints), 3):
-        if i + 2 < len(body_keypoints):
-            x_raw = body_keypoints[i]
-            y_raw = body_keypoints[i + 1]
-            if x_raw > 0 and y_raw > 0:
-                max_coord = max(max_coord, x_raw, y_raw)
+    # DWPose body connections (including toe connections)
+    connections = [
+        [1, 2], [1, 5], [2, 3], [3, 4], [5, 6], [6, 7],  # Arms
+        [1, 8], [8, 9], [9, 10], [1, 11], [11, 12], [12, 13],  # Legs
+        [1, 0], [0, 14], [14, 16], [0, 15], [15, 17],  # Head
+    ]
     
-    # Determine if coordinates are normalized or already in pixel space
-    is_normalized = max_coord <= 2.0
+    # Add toe connections if show_feet is enabled
+    if show_feet:
+        connections.extend([[10, 18], [13, 19]])  # Toe connections
     
-    # Convert keypoints to coordinate pairs with consistent coordinate system
-    keypoints = []
-    confidences = []
-    
-    for i in range(0, len(body_keypoints), 3):
-        if i + 2 < len(body_keypoints):
-            x_raw = body_keypoints[i]
-            y_raw = body_keypoints[i + 1]
-            conf = body_keypoints[i + 2]
+    # Draw connections
+    for start_idx, end_idx in connections:
+        if (start_idx < len(points) and end_idx < len(points) and
+            points[start_idx][2] > 0.1 and points[end_idx][2] > 0.1):
             
-            # Apply consistent coordinate transformation
-            if is_normalized:
-                # Data is normalized (0-1), convert to pixel coordinates
-                x = x_raw * W
-                y = y_raw * H
-            else:
-                # Data is already in pixel coordinates, use as-is
-                x = x_raw
-                y = y_raw
+            start_point = (int(points[start_idx][0]), int(points[start_idx][1]))
+            end_point = (int(points[end_idx][0]), int(points[end_idx][1]))
             
-            keypoints.append([x, y])
-            confidences.append(conf)
+            cv2.line(canvas, start_point, end_point, (0, 255, 0), 2)
     
-    # Debug: check if we have valid keypoints
-    valid_keypoints = sum(1 for conf in confidences if conf > 0.0)
-    # Debug logs disabled for legacy unianimate module (use PROPORTION_CHANGER_DEBUG=true to enable)
-    # print(f"🔍 Body Debug - Canvas size: {W}x{H}, Max coord: {max_coord:.4f}, Normalized: {is_normalized}")
-    # print(f"🔍 Body Debug - Valid keypoints: {valid_keypoints}/{len(confidences)}")
-    # print(f"🔍 Body Debug - First 3 keypoints: {[(i, f'{keypoints[i][0]:.1f}, {keypoints[i][1]:.1f}', f'{confidences[i]:.3f}') for i in range(min(3, len(keypoints)))]}")
-    
-    if valid_keypoints == 0:
-        # print("🔍 Body Debug - No valid keypoints, drawing center test circle")
-        # Draw a small test circle to confirm canvas works
-        cv2.circle(canvas, (W//2, H//2), 10, (255, 255, 255), thickness=-1)
-        return canvas
-    
-    # Draw limb connections (bones)
-    bones_drawn = 0
-    for i, limb in enumerate(limbSeq):
-        if len(keypoints) >= max(limb[0], limb[1]):
-            pt1_idx, pt2_idx = limb[0] - 1, limb[1] - 1  # Convert to 0-based indexing
-            
-            # Use more lenient confidence threshold
-            if (pt1_idx < len(confidences) and pt2_idx < len(confidences) and 
-                confidences[pt1_idx] > 0.0 and confidences[pt2_idx] > 0.0):
+    # Draw keypoints
+    if marker_size > 0:
+        for i, point in enumerate(points):
+            if point[2] > 0.1:
+                # Skip toe keypoints if show_feet is disabled
+                if not show_feet and i in [18, 19]:
+                    continue
                 
-                x1, y1 = keypoints[pt1_idx]
-                x2, y2 = keypoints[pt2_idx]
-                
-                # More lenient coordinate check
-                if x1 >= 0 and y1 >= 0 and x2 >= 0 and y2 >= 0:
-                    # Calculate bone properties (following WanVideo DWPose convention)
-                    # Note: WanVideo uses X=height, Y=width convention
-                    X1, Y1 = y1, x1  # Convert to WanVideo coordinate convention
-                    X2, Y2 = y2, x2
-                    mX = (X1 + X2) / 2  # Mean height coordinate
-                    mY = (Y1 + Y2) / 2  # Mean width coordinate
-                    length = ((X1 - X2) ** 2 + (Y1 - Y2) ** 2) ** 0.5
-                    
-                    if length > 1:  # Only draw if bone has reasonable length
-                        # Use WanVideo's angle calculation
-                        angle = math.degrees(math.atan2(X1 - X2, Y1 - Y2))
-                        
-                        # Draw bone as ellipse polygon (note coordinate order: Y, X)
-                        stick_width = max(1, pose_marker_size)
-                        polygon = cv2.ellipse2Poly((int(mY), int(mX)), 
-                                                   (int(length / 2), stick_width), 
-                                                   int(angle), 0, 360, 1)
-                        color_idx = min(i, len(colors) - 1)
-                        cv2.fillConvexPoly(canvas, polygon, colors[color_idx])
-                        bones_drawn += 1
-    
-    # Apply transparency to bones only if bones were drawn
-    if bones_drawn > 0:
-        canvas = (canvas * 0.6).astype(np.uint8)
-    
-    # Draw keypoint markers
-    if pose_marker_size > 0:
-        max_points = min(len(keypoints), 25 if show_feet else 18)
-        points_drawn = 0
-        for i in range(max_points):
-            if i < len(confidences) and confidences[i] > 0.0:
-                x, y = keypoints[i]
-                if x >= 0 and y >= 0 and x < W and y < H:
-                    color_idx = min(i, len(colors) - 1)
-                    cv2.circle(canvas, (int(x), int(y)), pose_marker_size, colors[color_idx], thickness=-1)
-                    points_drawn += 1
-        
-        # Debug: if no points drawn, draw test points
-        if points_drawn == 0:
-            cv2.circle(canvas, (50, 50), 5, (255, 0, 0), thickness=-1)
-            cv2.circle(canvas, (W-50, 50), 5, (0, 255, 0), thickness=-1)
-            cv2.circle(canvas, (W//2, H-50), 5, (0, 0, 255), thickness=-1)
+                center = (int(point[0]), int(point[1]))
+                cv2.circle(canvas, center, marker_size, (255, 0, 0), -1)
     
     return canvas
 
 
-def draw_dwpose_handpose(canvas, hand_keypoints, W, H, hand_marker_size):
+def draw_face_dwpose_render(canvas, person, orig_w, orig_h, scaled_w, scaled_h, marker_size):
     """
-    Draw hand keypoints using DWPose style
-    Based on WanVideo DWPose draw_handpose function
-    """
-    import cv2
-    import colorsys
-    
-    if not hand_keypoints or len(hand_keypoints) < 63:  # 21 points * 3
-        return canvas
-    
-    # Hand bone connections
-    edges = [[0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [5, 6], [6, 7], [7, 8], [0, 9], [9, 10],
-             [10, 11], [11, 12], [0, 13], [13, 14], [14, 15], [15, 16], [0, 17], [17, 18], [18, 19], [19, 20]]
-    
-    # First pass: determine coordinate system
-    max_coord = 0
-    for i in range(0, len(hand_keypoints), 3):
-        if i + 2 < len(hand_keypoints):
-            x_raw = hand_keypoints[i]
-            y_raw = hand_keypoints[i + 1]
-            if x_raw > 0 and y_raw > 0:
-                max_coord = max(max_coord, x_raw, y_raw)
-    
-    is_normalized = max_coord <= 2.0
-    
-    # Convert keypoints to coordinate pairs with consistent coordinate system
-    keypoints = []
-    confidences = []
-    
-    for i in range(0, len(hand_keypoints), 3):
-        if i + 2 < len(hand_keypoints):
-            x_raw = hand_keypoints[i]
-            y_raw = hand_keypoints[i + 1]
-            conf = hand_keypoints[i + 2]
-            
-            # Apply consistent coordinate transformation
-            if is_normalized:
-                x = x_raw * W
-                y = y_raw * H
-            else:
-                x = x_raw
-                y = y_raw
-                
-            keypoints.append([x, y])
-            confidences.append(conf)
-    
-    # Draw hand connections
-    if hand_marker_size > 0:
-        for ie, edge in enumerate(edges):
-            if (len(keypoints) > max(edge) and 
-                confidences[edge[0]] > 0.0 and confidences[edge[1]] > 0.0):
-                
-                x1, y1 = keypoints[edge[0]]
-                x2, y2 = keypoints[edge[1]]
-                
-                if x1 >= 0 and y1 >= 0 and x2 >= 0 and y2 >= 0:
-                    # Generate color using HSV
-                    h = (ie / float(len(edges))) % 1.0
-                    r, g, b = colorsys.hsv_to_rgb(h, 1.0, 1.0)
-                    color = (int(255 * r), int(255 * g), int(255 * b))
-                    cv2.line(canvas, (int(x1), int(y1)), (int(x2), int(y2)), color, thickness=2)
-    
-    # Draw hand keypoints
-    if hand_marker_size > 0:
-        for i, (x, y) in enumerate(keypoints):
-            if i < len(confidences) and confidences[i] > 0.0 and x >= 0 and y >= 0:
-                cv2.circle(canvas, (int(x), int(y)), hand_marker_size, (0, 0, 255), thickness=-1)
-    
-    return canvas
-
-
-def draw_dwpose_facepose(canvas, face_keypoints, W, H, face_marker_size):
-    """
-    Draw face keypoints using DWPose style
-    Based on WanVideo DWPose draw_facepose function
+    Draw face keypoints
     """
     import cv2
     
-    if not face_keypoints or len(face_keypoints) < 210:  # 70 points * 3
+    face_kpts = person.get('face_keypoints_2d', [])
+    if len(face_kpts) < 210 or marker_size <= 0:  # 70 points * 3
         return canvas
     
-    # First pass: determine coordinate system
-    max_coord = 0
-    for i in range(0, len(face_keypoints), 3):
-        if i + 2 < len(face_keypoints):
-            x_raw = face_keypoints[i]
-            y_raw = face_keypoints[i + 1]
-            if x_raw > 0 and y_raw > 0:
-                max_coord = max(max_coord, x_raw, y_raw)
-    
-    is_normalized = max_coord <= 2.0
-    
-    # Convert keypoints to coordinate pairs with consistent coordinate system
-    keypoints = []
-    confidences = []
-    
-    for i in range(0, len(face_keypoints), 3):
-        if i + 2 < len(face_keypoints):
-            x_raw = face_keypoints[i]
-            y_raw = face_keypoints[i + 1]
-            conf = face_keypoints[i + 2]
-            
-            # Apply consistent coordinate transformation
-            if is_normalized:
-                x = x_raw * W
-                y = y_raw * H
-            else:
-                x = x_raw
-                y = y_raw
-                
-            keypoints.append([x, y])
-            confidences.append(conf)
+    # Scale factors
+    scale_x = scaled_w / orig_w if orig_w > 0 else 1.0
+    scale_y = scaled_h / orig_h if orig_h > 0 else 1.0
     
     # Draw face keypoints
-    if face_marker_size > 0:
-        for i, (x, y) in enumerate(keypoints):
-            if i < len(confidences) and confidences[i] > 0.0 and x >= 0 and y >= 0:
-                cv2.circle(canvas, (int(x), int(y)), face_marker_size, (255, 255, 255), thickness=-1)
+    for i in range(70):
+        idx = i * 3
+        if face_kpts[idx + 2] > 0.1:  # confidence check
+            x = int(face_kpts[idx] * scale_x)
+            y = int(face_kpts[idx + 1] * scale_y)
+            cv2.circle(canvas, (x, y), marker_size, (255, 255, 0), -1)
+    
+    return canvas
+
+
+def draw_hands_dwpose_render(canvas, person, orig_w, orig_h, scaled_w, scaled_h, marker_size):
+    """
+    Draw hand keypoints
+    """
+    import cv2
+    
+    if marker_size <= 0:
+        return canvas
+    
+    # Scale factors
+    scale_x = scaled_w / orig_w if orig_w > 0 else 1.0
+    scale_y = scaled_h / orig_h if orig_h > 0 else 1.0
+    
+    # Draw left hand
+    lhand_kpts = person.get('hand_left_keypoints_2d', [])
+    if len(lhand_kpts) >= 63:  # 21 points * 3
+        for i in range(21):
+            idx = i * 3
+            if lhand_kpts[idx + 2] > 0.1:
+                x = int(lhand_kpts[idx] * scale_x)
+                y = int(lhand_kpts[idx + 1] * scale_y)
+                cv2.circle(canvas, (x, y), marker_size, (0, 0, 255), -1)
+    
+    # Draw right hand
+    rhand_kpts = person.get('hand_right_keypoints_2d', [])
+    if len(rhand_kpts) >= 63:  # 21 points * 3
+        for i in range(21):
+            idx = i * 3
+            if rhand_kpts[idx + 2] > 0.1:
+                x = int(rhand_kpts[idx] * scale_x)
+                y = int(rhand_kpts[idx + 1] * scale_y)
+                cv2.circle(canvas, (x, y), marker_size, (255, 0, 255), -1)
     
     return canvas
 
@@ -1980,15 +1564,11 @@ class ProportionChangerDWPoseRender:
 
 NODE_CLASS_MAPPINGS = {
     "ProportionChangerUniAnimateDWPoseDetector": ProportionChangerUniAnimateDWPoseDetector,
-    "ProportionChangerUltimateUniAnimateDWPoseDetector": ProportionChangerUltimateUniAnimateDWPoseDetector,
-    "ProportionChangerDWPoseDetectorForPoseKeypoint": ProportionChangerDWPoseDetectorForPoseKeypoint,
     "ProportionChangerDWPoseRender": ProportionChangerDWPoseRender,
     
     }
 NODE_DISPLAY_NAME_MAPPINGS = {
     "ProportionChangerUniAnimateDWPoseDetector": "ProportionChanger UniAnimate DWPose Detector",
-    "ProportionChangerUltimateUniAnimateDWPoseDetector": "ProportionChanger Ultimate UniAnimate DWPose Detector",
-    "ProportionChangerDWPoseDetectorForPoseKeypoint": "ProportionChanger DWPose Detector for POSE_KEYPOINT",
     "ProportionChangerDWPoseRender": "ProportionChanger DWPose Render",
     
     }

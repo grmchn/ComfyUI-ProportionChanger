@@ -8,7 +8,6 @@ import json
 
 # Import all nodes from our organized structure
 from .proportion_changer import (
-    ProportionChangerUniAnimateDWPoseDetector,
     ProportionChangerReference,
     ProportionChangerDWPoseDetector,
     ProportionChangerDWPoseRender,
@@ -188,7 +187,6 @@ class PoseKeypointPreview:
 
 NODE_CLASS_MAPPINGS = {
     # Main DWPose detector nodes
-    "ProportionChangerUniAnimateDWPoseDetector": ProportionChangerUniAnimateDWPoseDetector,
     "ProportionChangerReference": ProportionChangerReference,
     "ProportionChangerDWPoseDetector": ProportionChangerDWPoseDetector,
     "ProportionChangerDWPoseRender": ProportionChangerDWPoseRender,
@@ -202,7 +200,6 @@ NODE_CLASS_MAPPINGS = {
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     # Main DWPose detector nodes
-    "ProportionChangerUniAnimateDWPoseDetector": "ProportionChanger UniAnimate DWPose Detector",
     "ProportionChangerReference": "ProportionChanger Reference",
     "ProportionChangerDWPoseDetector": "ProportionChanger DWPose Detector",
     "ProportionChangerDWPoseRender": "ProportionChanger DWPose Render",

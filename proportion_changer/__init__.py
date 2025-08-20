@@ -5,7 +5,6 @@ Provides organized node classes for DWPose detection and rendering
 
 # Import detector node classes
 from .detector_nodes import (
-    ProportionChangerUniAnimateDWPoseDetector,
     ProportionChangerDWPoseDetector
 )
 
@@ -31,7 +30,6 @@ from .interpolation_node import (
 
 __all__ = [
     # Detector nodes
-    "ProportionChangerUniAnimateDWPoseDetector",
     "ProportionChangerDWPoseDetector",
     
     # Ultimate detector node
