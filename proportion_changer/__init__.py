@@ -28,6 +28,12 @@ from .interpolation_node import (
     ProportionChangerInterpolator
 )
 
+# Import keypoint denoiser node classes
+from .keypoint_denoiser_node import (
+    ProportionChangerKeypointDenoiser,
+    ProportionChangerKeypointDenoiserAdvanced
+)
+
 __all__ = [
     # Detector nodes
     "ProportionChangerDWPoseDetector",
@@ -42,5 +48,9 @@ __all__ = [
     "ProportionChangerParams",
     
     # Interpolation nodes
-    "ProportionChangerInterpolator"
+    "ProportionChangerInterpolator",
+    
+    # KeyPoint Denoiser nodes
+    "ProportionChangerKeypointDenoiser",
+    "ProportionChangerKeypointDenoiserAdvanced"
 ]

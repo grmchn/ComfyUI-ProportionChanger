@@ -12,7 +12,9 @@ from .proportion_changer import (
     ProportionChangerDWPoseDetector,
     ProportionChangerDWPoseRender,
     ProportionChangerParams,
-    ProportionChangerInterpolator
+    ProportionChangerInterpolator,
+    ProportionChangerKeypointDenoiser,
+    ProportionChangerKeypointDenoiserAdvanced
 )
 
 
@@ -193,6 +195,10 @@ NODE_CLASS_MAPPINGS = {
     "ProportionChangerParams": ProportionChangerParams,
     "ProportionChangerInterpolator": ProportionChangerInterpolator,
     
+    # KeyPoint Denoiser nodes
+    "ProportionChangerKeypointDenoiser": ProportionChangerKeypointDenoiser,
+    "ProportionChangerKeypointDenoiserAdvanced": ProportionChangerKeypointDenoiserAdvanced,
+    
     # Utility nodes
     "PoseJSONToPoseKeypoint": PoseJSONToPoseKeypoint,
     "PoseKeypointPreview": PoseKeypointPreview,
@@ -205,6 +211,10 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ProportionChangerReference": "ProportionChanger Reference",
     "ProportionChangerParams": "ProportionChanger Params",
     "ProportionChangerInterpolator": "ProportionChanger Interpolator",
+    
+    # KeyPoint Denoiser nodes
+    "ProportionChangerKeypointDenoiser": "ProportionChanger KeyPoint Denoiser",
+    "ProportionChangerKeypointDenoiserAdvanced": "ProportionChanger KeyPoint Denoiser (Advanced)",
     
     # Utility nodes
     "PoseJSONToPoseKeypoint": "pose_keypoint input",
