@@ -187,9 +187,9 @@ class PoseKeypointPreview:
 
 NODE_CLASS_MAPPINGS = {
     # Main DWPose detector nodes
-    "ProportionChangerReference": ProportionChangerReference,
-    "ProportionChangerDWPoseDetector": ProportionChangerDWPoseDetector,
     "ProportionChangerDWPoseRender": ProportionChangerDWPoseRender,
+    "ProportionChangerDWPoseDetector": ProportionChangerDWPoseDetector,
+    "ProportionChangerReference": ProportionChangerReference,
     "ProportionChangerParams": ProportionChangerParams,
     "ProportionChangerInterpolator": ProportionChangerInterpolator,
     
@@ -200,9 +200,9 @@ NODE_CLASS_MAPPINGS = {
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     # Main DWPose detector nodes
-    "ProportionChangerReference": "ProportionChanger Reference",
-    "ProportionChangerDWPoseDetector": "ProportionChanger DWPose Detector",
     "ProportionChangerDWPoseRender": "ProportionChanger DWPose Render",
+    "ProportionChangerDWPoseDetector": "ProportionChanger DWPose Detector",
+    "ProportionChangerReference": "ProportionChanger Reference",
     "ProportionChangerParams": "ProportionChanger Params",
     "ProportionChangerInterpolator": "ProportionChanger Interpolator",
     
