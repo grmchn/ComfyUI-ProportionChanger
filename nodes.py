@@ -213,8 +213,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ProportionChangerInterpolator": "ProportionChanger Interpolator",
     
     # KeyPoint Denoiser nodes
-    "ProportionChangerKeypointDenoiser": "ProportionChanger KeyPoint Denoiser",
-    "ProportionChangerKeypointDenoiserAdvanced": "ProportionChanger KeyPoint Denoiser (Advanced)",
+    "ProportionChangerKeypointDenoiser": "ProportionChanger Denoiser",
+    "ProportionChangerKeypointDenoiserAdvanced": "ProportionChanger Denoiser (Advanced)",
     
     # Utility nodes
     "PoseJSONToPoseKeypoint": "pose_keypoint input",

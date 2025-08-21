@@ -253,7 +253,7 @@ class ProportionChangerKeypointDenoiserAdvanced:
     RETURN_TYPES = ("POSE_KEYPOINT",)
     RETURN_NAMES = ("denoised_pose_keypoint",)
     FUNCTION = "denoise_keypoints_advanced"
-    CATEGORY = "ProportionChanger/Advanced"
+    CATEGORY = "ProportionChanger"
 
     def denoise_keypoints_advanced(self,
                                  pose_keypoint: List[Dict],

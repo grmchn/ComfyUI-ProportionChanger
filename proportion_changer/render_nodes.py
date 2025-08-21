@@ -31,6 +31,9 @@ class ProportionChangerDWPoseRender:
     @classmethod
     def INPUT_TYPES(s):
         return {
+            "required": {
+                "pose_keypoint": ("POSE_KEYPOINT", {"tooltip": "POSE_KEYPOINT data to render"}),
+            },
             "optional": {
                 "show_body": ("BOOLEAN", {"default": True, "tooltip": "Draw body keypoints"}),
                 "show_face": ("BOOLEAN", {"default": True, "tooltip": "Draw face keypoints"}),
@@ -40,7 +43,6 @@ class ProportionChangerDWPoseRender:
                 "pose_marker_size": ("INT", {"default": 4, "min": 0, "max": 100, "tooltip": "Body keypoint marker size"}),
                 "face_marker_size": ("INT", {"default": 3, "min": 0, "max": 100, "tooltip": "Face keypoint marker size"}),
                 "hand_marker_size": ("INT", {"default": 2, "min": 0, "max": 100, "tooltip": "Hand keypoint marker size"}),
-                "pose_keypoint": ("POSE_KEYPOINT", {"default": None, "tooltip": "POSE_KEYPOINT data to render"}),
             },
         }
 
@@ -48,8 +50,8 @@ class ProportionChangerDWPoseRender:
     FUNCTION = "render_img"
     CATEGORY = "ProportionChanger"
 
-    def render_img(self, show_body, show_face, show_hands, show_feet, resolution_x, 
-                   pose_marker_size, face_marker_size, hand_marker_size, pose_keypoint=None):
+    def render_img(self, pose_keypoint, show_body=True, show_face=True, show_hands=True, show_feet=True, 
+                   resolution_x=-1, pose_marker_size=4, face_marker_size=3, hand_marker_size=2):
         
         if pose_keypoint is None:
             raise ValueError("pose_keypoint input is required")
