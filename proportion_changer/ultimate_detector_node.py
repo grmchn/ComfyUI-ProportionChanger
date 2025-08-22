@@ -453,12 +453,17 @@ class ProportionChangerReference:
         candidate = results_vis[0]['bodies']['candidate']
         
         ########left leg########
+        # DEBUG: Check left ankle position before processing
+        left_ankle_before = results_vis[0]['bodies']['candidate'][10].copy()
+        print(f"[DEBUG] Left ankle BEFORE ll1: {left_ankle_before}")
+        
         l_ll1_ref = ((ref_candidate[8][0] - ref_candidate[9][0]) ** 2 + (ref_candidate[8][1] - ref_candidate[9][1]) ** 2) ** 0.5
         l_ll1_0 = ((candidate[8][0] - candidate[9][0]) ** 2 + (candidate[8][1] - candidate[9][1]) ** 2) ** 0.5
         ll1_ratio = l_ll1_ref / l_ll1_0 if l_ll1_0 > 0 else 1.0
 
         x_offset_ll1 = (candidate[9][0]-candidate[8][0])*(ll1_ratio-1.)
         y_offset_ll1 = (candidate[9][1]-candidate[8][1])*(ll1_ratio-1.)
+        print(f"[DEBUG] ll1_ratio: {ll1_ratio}, x_offset_ll1: {x_offset_ll1}, y_offset_ll1: {y_offset_ll1}")
 
         results_vis[0]['bodies']['candidate'][9,0] += x_offset_ll1
         results_vis[0]['bodies']['candidate'][9,1] += y_offset_ll1
@@ -467,6 +472,10 @@ class ProportionChangerReference:
         if len(candidate) > 19:
             results_vis[0]['bodies']['candidate'][19,0] += x_offset_ll1
             results_vis[0]['bodies']['candidate'][19,1] += y_offset_ll1
+        
+        # DEBUG: Check left ankle position after ll1 processing
+        left_ankle_after_ll1 = results_vis[0]['bodies']['candidate'][10].copy()
+        print(f"[DEBUG] Left ankle AFTER ll1: {left_ankle_after_ll1}")
 
         # Update candidate reference
         candidate = results_vis[0]['bodies']['candidate']
@@ -477,23 +486,38 @@ class ProportionChangerReference:
 
         x_offset_ll2 = (candidate[10][0]-candidate[9][0])*(ll2_ratio-1.)
         y_offset_ll2 = (candidate[10][1]-candidate[9][1])*(ll2_ratio-1.)
+        print(f"[DEBUG] ll2_ratio: {ll2_ratio}, x_offset_ll2: {x_offset_ll2}, y_offset_ll2: {y_offset_ll2}")
 
-        results_vis[0]['bodies']['candidate'][10,0] += x_offset_ll2
-        results_vis[0]['bodies']['candidate'][10,1] += y_offset_ll2
+        # FIX: Remove double offset for left ankle - it should only move with knee in ll1
+        # results_vis[0]['bodies']['candidate'][10,0] += x_offset_ll2
+        # results_vis[0]['bodies']['candidate'][10,1] += y_offset_ll2
+        print(f"[DEBUG] FIXING: Skipping left ankle ll2 offset to prevent double movement")
         if len(candidate) > 19:
-            results_vis[0]['bodies']['candidate'][19,0] += x_offset_ll2
-            results_vis[0]['bodies']['candidate'][19,1] += y_offset_ll2
+            # FIX: Remove double offset for left toe - it should only move with knee in ll1
+            # results_vis[0]['bodies']['candidate'][19,0] += x_offset_ll2
+            # results_vis[0]['bodies']['candidate'][19,1] += y_offset_ll2
+            print(f"[DEBUG] FIXING: Skipping left toe ll2 offset to prevent double movement")
+        
+        # DEBUG: Check left ankle position after ll2 processing (FINAL)
+        left_ankle_final = results_vis[0]['bodies']['candidate'][10].copy()
+        print(f"[DEBUG] Left ankle FINAL after ll2: {left_ankle_final}")
+        print(f"[DEBUG] Total ankle movement: {left_ankle_final - left_ankle_before}")
 
         # Update candidate reference  
         candidate = results_vis[0]['bodies']['candidate']
 
         ########right leg########
+        # DEBUG: Check right ankle position before processing
+        right_ankle_before = results_vis[0]['bodies']['candidate'][13].copy()
+        print(f"[DEBUG] Right ankle BEFORE rl1: {right_ankle_before}")
+        
         l_rl1_ref = ((ref_candidate[11][0] - ref_candidate[12][0]) ** 2 + (ref_candidate[11][1] - ref_candidate[12][1]) ** 2) ** 0.5
         l_rl1_0 = ((candidate[11][0] - candidate[12][0]) ** 2 + (candidate[11][1] - candidate[12][1]) ** 2) ** 0.5
         rl1_ratio = l_rl1_ref / l_rl1_0 if l_rl1_0 > 0 else 1.0
 
         x_offset_rl1 = (candidate[12][0]-candidate[11][0])*(rl1_ratio-1.)
         y_offset_rl1 = (candidate[12][1]-candidate[11][1])*(rl1_ratio-1.)
+        print(f"[DEBUG] rl1_ratio: {rl1_ratio}, x_offset_rl1: {x_offset_rl1}, y_offset_rl1: {y_offset_rl1}")
 
         results_vis[0]['bodies']['candidate'][12,0] += x_offset_rl1
         results_vis[0]['bodies']['candidate'][12,1] += y_offset_rl1
@@ -502,6 +526,10 @@ class ProportionChangerReference:
         if len(candidate) > 18:
             results_vis[0]['bodies']['candidate'][18,0] += x_offset_rl1
             results_vis[0]['bodies']['candidate'][18,1] += y_offset_rl1
+        
+        # DEBUG: Check right ankle position after rl1 processing
+        right_ankle_after_rl1 = results_vis[0]['bodies']['candidate'][13].copy()
+        print(f"[DEBUG] Right ankle AFTER rl1: {right_ankle_after_rl1}")
 
         # Update candidate reference
         candidate = results_vis[0]['bodies']['candidate']
@@ -512,12 +540,22 @@ class ProportionChangerReference:
 
         x_offset_rl2 = (candidate[13][0]-candidate[12][0])*(rl2_ratio-1.)
         y_offset_rl2 = (candidate[13][1]-candidate[12][1])*(rl2_ratio-1.)
+        print(f"[DEBUG] rl2_ratio: {rl2_ratio}, x_offset_rl2: {x_offset_rl2}, y_offset_rl2: {y_offset_rl2}")
 
-        results_vis[0]['bodies']['candidate'][13,0] += x_offset_rl2
-        results_vis[0]['bodies']['candidate'][13,1] += y_offset_rl2
+        # FIX: Remove double offset for right ankle - it should only move with knee in rl1
+        # results_vis[0]['bodies']['candidate'][13,0] += x_offset_rl2
+        # results_vis[0]['bodies']['candidate'][13,1] += y_offset_rl2
+        print(f"[DEBUG] FIXING: Skipping right ankle rl2 offset to prevent double movement")
         if len(candidate) > 18:
-            results_vis[0]['bodies']['candidate'][18,0] += x_offset_rl2
-            results_vis[0]['bodies']['candidate'][18,1] += y_offset_rl2
+            # FIX: Remove double offset for right toe - it should only move with knee in rl1
+            # results_vis[0]['bodies']['candidate'][18,0] += x_offset_rl2
+            # results_vis[0]['bodies']['candidate'][18,1] += y_offset_rl2
+            print(f"[DEBUG] FIXING: Skipping right toe rl2 offset to prevent double movement")
+        
+        # DEBUG: Check right ankle position after rl2 processing (FINAL)
+        right_ankle_final = results_vis[0]['bodies']['candidate'][13].copy()
+        print(f"[DEBUG] Right ankle FINAL after rl2: {right_ankle_final}")
+        print(f"[DEBUG] Total right ankle movement: {right_ankle_final - right_ankle_before}")
         
         # IMPORTANT: Final position offset for first frame
         candidate = results_vis[0]['bodies']['candidate']
@@ -693,11 +731,14 @@ class ProportionChangerReference:
             x_offset_ll2 = (results_vis[i]['bodies']['candidate'][10][0]-results_vis[i]['bodies']['candidate'][9][0])*(ll2_ratio-1.)
             y_offset_ll2 = (results_vis[i]['bodies']['candidate'][10][1]-results_vis[i]['bodies']['candidate'][9][1])*(ll2_ratio-1.)
 
-            results_vis[i]['bodies']['candidate'][10,0] += x_offset_ll2
-            results_vis[i]['bodies']['candidate'][10,1] += y_offset_ll2
+            # FIX: Remove double offset for left ankle in batch processing too
+            # results_vis[i]['bodies']['candidate'][10,0] += x_offset_ll2
+            # results_vis[i]['bodies']['candidate'][10,1] += y_offset_ll2
             if len(results_vis[i]['bodies']['candidate']) > 19:
-                results_vis[i]['bodies']['candidate'][19,0] += x_offset_ll2
-                results_vis[i]['bodies']['candidate'][19,1] += y_offset_ll2
+                # FIX: Remove double offset for left toe in batch processing too  
+                # results_vis[i]['bodies']['candidate'][19,0] += x_offset_ll2
+                # results_vis[i]['bodies']['candidate'][19,1] += y_offset_ll2
+                pass  # Empty block to fix indentation error
 
             ########right leg########
             x_offset_rl1 = (results_vis[i]['bodies']['candidate'][12][0]-results_vis[i]['bodies']['candidate'][11][0])*(rl1_ratio-1.)
@@ -714,11 +755,14 @@ class ProportionChangerReference:
             x_offset_rl2 = (results_vis[i]['bodies']['candidate'][13][0]-results_vis[i]['bodies']['candidate'][12][0])*(rl2_ratio-1.)
             y_offset_rl2 = (results_vis[i]['bodies']['candidate'][13][1]-results_vis[i]['bodies']['candidate'][12][1])*(rl2_ratio-1.)
 
-            results_vis[i]['bodies']['candidate'][13,0] += x_offset_rl2
-            results_vis[i]['bodies']['candidate'][13,1] += y_offset_rl2
+            # FIX: Remove double offset for right ankle in batch processing too
+            # results_vis[i]['bodies']['candidate'][13,0] += x_offset_rl2
+            # results_vis[i]['bodies']['candidate'][13,1] += y_offset_rl2
             if len(results_vis[i]['bodies']['candidate']) > 18:
-                results_vis[i]['bodies']['candidate'][18,0] += x_offset_rl2
-                results_vis[i]['bodies']['candidate'][18,1] += y_offset_rl2
+                # FIX: Remove double offset for right toe in batch processing too
+                # results_vis[i]['bodies']['candidate'][18,0] += x_offset_rl2
+                # results_vis[i]['bodies']['candidate'][18,1] += y_offset_rl2
+                pass  # Empty block to fix indentation error
 
             # Apply face alignment after all body adjustments
             frame_faces = results_vis[i]['faces']
@@ -1119,10 +1163,12 @@ class ProportionChangerReference:
             x_offset_ll2 = (candidate[10][0]-candidate[9][0])*(ll2_ratio-1.)
             y_offset_ll2 = (candidate[10][1]-candidate[9][1])*(ll2_ratio-1.)
 
-            candidate[10,0] += x_offset_ll2
-            candidate[10,1] += y_offset_ll2
-            candidate[19,0] += x_offset_ll2
-            candidate[19,1] += y_offset_ll2
+            # FIX: Remove double offset for left ankle in apply_proportion_changes too
+            # candidate[10,0] += x_offset_ll2
+            # candidate[10,1] += y_offset_ll2
+            # FIX: Remove double offset for left toe in apply_proportion_changes too
+            # candidate[19,0] += x_offset_ll2
+            # candidate[19,1] += y_offset_ll2
 
             ########right leg########
             l_rl1_ref = ((ref_candidate[11][0] - ref_candidate[12][0]) ** 2 + (ref_candidate[11][1] - ref_candidate[12][1]) ** 2) ** 0.5
@@ -1146,10 +1192,12 @@ class ProportionChangerReference:
             x_offset_rl2 = (candidate[13][0]-candidate[12][0])*(rl2_ratio-1.)
             y_offset_rl2 = (candidate[13][1]-candidate[12][1])*(rl2_ratio-1.)
 
-            candidate[13,0] += x_offset_rl2
-            candidate[13,1] += y_offset_rl2
-            candidate[18,0] += x_offset_rl2
-            candidate[18,1] += y_offset_rl2
+            # FIX: Remove double offset for right ankle in apply_proportion_changes too
+            # candidate[13,0] += x_offset_rl2
+            # candidate[13,1] += y_offset_rl2
+            # FIX: Remove double offset for right toe in apply_proportion_changes too
+            # candidate[18,0] += x_offset_rl2
+            # candidate[18,1] += y_offset_rl2
 
             # Final offset to align neck positions (line 496 in original)
             offset = ref_candidate[1] - candidate[1]
