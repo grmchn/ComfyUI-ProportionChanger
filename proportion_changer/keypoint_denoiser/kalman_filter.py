@@ -21,12 +21,13 @@ class KeypointKalmanFilter:
         # 状態ベクトル [x, y, vx, vy]
         self.x = np.array([initial_pos[0], initial_pos[1], 0.0, 0.0], dtype=np.float32)
         
-        # 状態遷移行列 (Δt=1)
+        # 状態遷移行列 (減衰付き等速度モデル)
+        velocity_decay = 0.8  # 速度減衰係数
         self.A = np.array([
             [1, 0, 1, 0],  # x' = x + vx
             [0, 1, 0, 1],  # y' = y + vy
-            [0, 0, 1, 0],  # vx' = vx
-            [0, 0, 0, 1]   # vy' = vy
+            [0, 0, velocity_decay, 0],  # vx' = vx * decay (速度減衰)
+            [0, 0, 0, velocity_decay]   # vy' = vy * decay
         ], dtype=np.float32)
         
         # 観測行列 (位置のみ観測)
@@ -35,8 +36,8 @@ class KeypointKalmanFilter:
             [0, 1, 0, 0]   # observe y
         ], dtype=np.float32)
         
-        # 初期共分散行列
-        self.P = np.diag([0.001, 0.001, 0.01, 0.01]).astype(np.float32)
+        # 初期共分散行列（より保守的な初期化）
+        self.P = np.diag([1.0, 1.0, 0.1, 0.1]).astype(np.float32)
         
         # パラメータ保存
         self.body_scale = body_scale
@@ -116,6 +117,10 @@ class KeypointKalmanFilter:
             self.measurement_history.append(measurement.copy())
             self.mahalanobis_history.append(mahalanobis_dist2)
         
+        # デバッグ情報（最初の数回のみ）
+        if self.config.verbose_logging and len(self.measurement_history) < 5:
+            print(f"🔍 キーポイント{getattr(self, 'keypoint_id', '?')}: Mahalanobis={mahalanobis_dist2:.2f}, 閾値={gate_threshold:.2f}")
+        
         if mahalanobis_dist2 < gate_threshold:
             # 観測受け入れ：更新実行
             K = self.P @ self.H.T @ S_inv
@@ -178,12 +183,14 @@ def initialize_kalman_filters(first_valid_frame: List[List[float]],
         keypoint = first_valid_frame[keypoint_idx]
         
         if keypoint[2] > config.conf_min:  # 信頼度チェック
-            filters[keypoint_idx] = KeypointKalmanFilter(
+            kf = KeypointKalmanFilter(
                 initial_pos=np.array(keypoint[:2], dtype=np.float32),
                 conf=keypoint[2],
                 body_scale=body_scale,
                 config=config
             )
+            kf.keypoint_id = keypoint_idx  # デバッグ用ID追加
+            filters[keypoint_idx] = kf
             
             if config.verbose_logging:
                 print(f"🔮 フィルタ初期化: キーポイント{keypoint_idx} pos=[{keypoint[0]:.3f}, {keypoint[1]:.3f}]")

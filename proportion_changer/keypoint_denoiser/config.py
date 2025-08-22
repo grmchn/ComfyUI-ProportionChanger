@@ -124,6 +124,19 @@ DANCE_CONFIG = DenoiserConfig(
     enable_dance_protection=True
 )
 
+BALANCED_CONFIG = DenoiserConfig(
+    qv_base=0.01**2,  # 適度なプロセスノイズ: 1フレームで0.01ピクセルの標準偏差
+    r_base=0.01**2,   # 観測ノイズもバランス調整
+    gate_threshold=50.0,  # より緩い閾値 (χ²分布の高い確率)
+    gate_threshold_recovery=75.0,
+    max_iterations=2,
+    projection_interval=3,
+    light_window_size=3,
+    use_rts_smoother=True,
+    enable_bone_constraints=True,
+    verbose_logging=True
+)
+
 # DWPose骨格構造定義
 SKELETON_PAIRS = {
     'torso_length': (1, 8),      # 首 -> 左腰 (代表)
@@ -147,7 +160,7 @@ def get_config_by_name(config_name: str) -> DenoiserConfig:
         'precision': PRECISION_CONFIG,
         'performance': PERFORMANCE_CONFIG, 
         'dance_optimized': DANCE_CONFIG,
-        'balanced': DenoiserConfig()  # デフォルト
+        'balanced': BALANCED_CONFIG
     }
     
     return config_map.get(config_name.lower(), DenoiserConfig())

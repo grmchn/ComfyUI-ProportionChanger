@@ -13,8 +13,9 @@ from .proportion_changer import (
     ProportionChangerDWPoseRender,
     ProportionChangerParams,
     ProportionChangerInterpolator,
-    ProportionChangerKeypointDenoiser,
-    ProportionChangerKeypointDenoiserAdvanced
+    # TODO: Re-enable after fixing Kalman filter issues
+    # ProportionChangerKeypointDenoiser,
+    # ProportionChangerKeypointDenoiserAdvanced
 )
 
 
@@ -195,9 +196,10 @@ NODE_CLASS_MAPPINGS = {
     "ProportionChangerParams": ProportionChangerParams,
     "ProportionChangerInterpolator": ProportionChangerInterpolator,
     
-    # KeyPoint Denoiser nodes
-    "ProportionChangerKeypointDenoiser": ProportionChangerKeypointDenoiser,
-    "ProportionChangerKeypointDenoiserAdvanced": ProportionChangerKeypointDenoiserAdvanced,
+    # KeyPoint Denoiser nodes (temporarily disabled - Issue024)
+    # TODO: Re-enable after fixing Kalman filter stability issues
+    # "ProportionChangerKeypointDenoiser": ProportionChangerKeypointDenoiser,
+    # "ProportionChangerKeypointDenoiserAdvanced": ProportionChangerKeypointDenoiserAdvanced,
     
     # Utility nodes
     "PoseJSONToPoseKeypoint": PoseJSONToPoseKeypoint,
@@ -212,9 +214,9 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "ProportionChangerParams": "ProportionChanger Params",
     "ProportionChangerInterpolator": "ProportionChanger Interpolator",
     
-    # KeyPoint Denoiser nodes
-    "ProportionChangerKeypointDenoiser": "ProportionChanger Denoiser",
-    "ProportionChangerKeypointDenoiserAdvanced": "ProportionChanger Denoiser (Advanced)",
+    # KeyPoint Denoiser nodes (temporarily disabled - Issue024)
+    # "ProportionChangerKeypointDenoiser": "ProportionChanger Denoiser",
+    # "ProportionChangerKeypointDenoiserAdvanced": "ProportionChanger Denoiser (Advanced)",
     
     # Utility nodes
     "PoseJSONToPoseKeypoint": "pose_keypoint input",

@@ -15,6 +15,21 @@ def distance(p1: np.ndarray, p2: np.ndarray) -> float:
     """2点間の距離を計算"""
     return np.linalg.norm(np.array(p1) - np.array(p2))
 
+def get_frame_pose_data(frame_data):
+    """フレームデータから安全にposeデータを取得"""
+    if not frame_data:
+        return None
+    
+    # 辞書形式の場合: frame_data自体が {people: [...], canvas_width: ...} 形式
+    if isinstance(frame_data, dict) and frame_data.get('people'):
+        return frame_data['people'][0]
+    
+    # リスト形式の場合: frame_data が [{people: [...], canvas_width: ...}] 形式
+    if isinstance(frame_data, list) and len(frame_data) > 0 and isinstance(frame_data[0], dict) and frame_data[0].get('people'):
+        return frame_data[0]['people'][0]
+    
+    return None
+
 def extract_pose_keypoints_from_frame(frame_people_data: Dict) -> List[List[float]]:
     """
     フレームデータからpose_keypointsを抽出
@@ -176,10 +191,11 @@ def analyze_body_statistics_enhanced(pose_keypoint_batch: List, config: Denoiser
     
     # Phase 1: 全フレームで正面度スコア計算
     for frame_idx, frame_data in enumerate(pose_keypoint_batch):
-        if not frame_data or not frame_data[0].get('people'):
+        people_data = get_frame_pose_data(frame_data)
+        if not people_data:
             continue
             
-        pose_data = extract_pose_keypoints_from_frame(frame_data[0]['people'][0])
+        pose_data = extract_pose_keypoints_from_frame(people_data)
         
         # 改良された正面度計算（肩幅・腰幅・目間距離・顔yaw代理）
         orientation_score = calculate_enhanced_orientation_score(
@@ -201,10 +217,11 @@ def analyze_body_statistics_enhanced(pose_keypoint_batch: List, config: Denoiser
     
     # Phase 2: 正面フレーム群で骨長基準学習
     for frame_idx, frame_data in enumerate(pose_keypoint_batch):
-        if not frame_data or not frame_data[0].get('people'):
+        people_data = get_frame_pose_data(frame_data)
+        if not people_data:
             continue
             
-        pose_data = extract_pose_keypoints_from_frame(frame_data[0]['people'][0])
+        pose_data = extract_pose_keypoints_from_frame(people_data)
         distances = calculate_joint_distances_enhanced(
             pose_data, verbose=config.verbose_logging and frame_idx == 0  # 最初のフレームのみ詳細ログ
         )

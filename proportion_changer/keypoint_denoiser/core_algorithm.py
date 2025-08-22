@@ -11,12 +11,12 @@ from typing import List, Dict, Tuple, Optional, Any
 try:
     from .config import DenoiserConfig
     from .kalman_filter import KeypointKalmanFilter, initialize_kalman_filters, update_kalman_filters_batch
-    from .body_analysis import analyze_body_statistics_enhanced, extract_pose_keypoints_from_frame, calculate_enhanced_orientation_score
+    from .body_analysis import analyze_body_statistics_enhanced, extract_pose_keypoints_from_frame, calculate_enhanced_orientation_score, get_frame_pose_data
 except ImportError:
     # スタンドアロンテスト用
     from config import DenoiserConfig
     from kalman_filter import KeypointKalmanFilter, initialize_kalman_filters, update_kalman_filters_batch
-    from body_analysis import analyze_body_statistics_enhanced, extract_pose_keypoints_from_frame, calculate_enhanced_orientation_score
+    from body_analysis import analyze_body_statistics_enhanced, extract_pose_keypoints_from_frame, calculate_enhanced_orientation_score, get_frame_pose_data
 
 def log_phase_start(phase_num: int, phase_name: str, verbose: bool = True):
     """段階開始ログ"""
@@ -47,8 +47,9 @@ def preprocess_keypoints(pose_keypoint_batch: List, config: DenoiserConfig) -> L
         low_confidence_count = 0
         
         for frame_data in preprocessed:
-            if frame_data and frame_data[0].get('people'):
-                keypoints = extract_pose_keypoints_from_frame(frame_data[0]['people'][0])
+            people_data = get_frame_pose_data(frame_data)
+            if people_data:
+                keypoints = extract_pose_keypoints_from_frame(people_data)
                 for kp in keypoints:
                     total_keypoints += 1
                     if kp[2] < config.conf_min:
@@ -81,7 +82,8 @@ def apply_kalman_filtering(pose_keypoint_batch: List, body_stats: Dict, config: 
     if config.verbose_logging:
         print("  🔮 カルマンフィルタ初期化...")
     
-    first_valid_frame = extract_pose_keypoints_from_frame(pose_keypoint_batch[0][0]['people'][0])
+    first_frame_people = get_frame_pose_data(pose_keypoint_batch[0])
+    first_valid_frame = extract_pose_keypoints_from_frame(first_frame_people)
     kalman_filters = initialize_kalman_filters(first_valid_frame, body_stats['primary_scale'], config)
     
     if config.verbose_logging:
@@ -94,7 +96,7 @@ def apply_kalman_filtering(pose_keypoint_batch: List, body_stats: Dict, config: 
     
     # フレームループ処理
     for frame_idx in range(T):
-        current_frame_data = pose_keypoint_batch[frame_idx][0]['people'][0]
+        current_frame_data = get_frame_pose_data(pose_keypoint_batch[frame_idx])
         current_keypoints = extract_pose_keypoints_from_frame(current_frame_data)
         
         # 現在フレームの正面度計算
@@ -379,7 +381,7 @@ def convert_to_pose_keypoint_batch(positions: np.ndarray,
     
     for frame_idx in range(len(positions)):
         frame_data = copy.deepcopy(original_batch[frame_idx])
-        people_data = frame_data[0]['people'][0]
+        people_data = get_frame_pose_data(frame_data)
         
         # pose_keypoints_2dを更新
         new_pose_keypoints = []

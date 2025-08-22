@@ -7,7 +7,7 @@ Based on expert AI review and comprehensive algorithm design in Issue024
 """
 
 # Core components export
-from .config import DenoiserConfig, PRECISION_CONFIG, PERFORMANCE_CONFIG, DANCE_CONFIG
+from .config import DenoiserConfig, PRECISION_CONFIG, PERFORMANCE_CONFIG, DANCE_CONFIG, BALANCED_CONFIG, get_config_by_name, create_custom_config
 from .kalman_filter import KeypointKalmanFilter
 from .body_analysis import calculate_enhanced_orientation_score, calculate_joint_distances_enhanced
 from .core_algorithm import denoise_pose_keypoints_kalman
@@ -17,6 +17,9 @@ __all__ = [
     'PRECISION_CONFIG', 
     'PERFORMANCE_CONFIG',
     'DANCE_CONFIG',
+    'BALANCED_CONFIG',
+    'get_config_by_name',
+    'create_custom_config',
     'KeypointKalmanFilter',
     'calculate_enhanced_orientation_score',
     'calculate_joint_distances_enhanced', 
