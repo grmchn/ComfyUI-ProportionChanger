@@ -1,6 +1,6 @@
 """
 KeyPoint Denoiser Node for ComfyUI
-カルマンフィルタベースKeyPointデノイザーのComfyUIノード実装
+ComfyUI node implementation of Kalman filter-based KeyPoint denoiser
 """
 
 import copy
@@ -36,10 +36,10 @@ except ImportError:
 
 class ProportionChangerKeypointDenoiser:
     """
-    KeyPointデノイザーノード
+    KeyPoint denoiser node
     
-    カルマンフィルタベースの時系列ノイズ除去により、
-    ダンス動画などの高速動作でのKeyPoint飛びや検出ミスを修正
+    Corrects KeyPoint jumps and detection errors in high-speed movements
+    such as dance videos using Kalman filter-based time-series noise removal
     """
     
     @classmethod
@@ -95,38 +95,38 @@ class ProportionChangerKeypointDenoiser:
                          enable_rts_smoother: bool = True,
                          enable_verbose_logging: bool = False) -> Tuple[List[Dict]]:
         """
-        KeyPointデノイザーのメイン処理
+        Main processing of KeyPoint denoiser
         
         Args:
-            pose_keypoint: POSE_KEYPOINT形式のバッチデータ
-            processing_mode: 処理モード（balanced/precision/performance/dance_optimized）
-            denoising_strength: デノイジング強度（0.0-3.0）
-            confidence_threshold: 信頼度閾値
-            gate_threshold_multiplier: ゲート閾値調整倍率
-            enable_bone_constraints: 構造制約有効化
-            enable_rts_smoother: RTSスムーザ有効化
-            enable_verbose_logging: 詳細ログ有効化
+            pose_keypoint: Batch data in POSE_KEYPOINT format
+            processing_mode: Processing mode (balanced/precision/performance/dance_optimized)
+            denoising_strength: Denoising strength (0.0-3.0)
+            confidence_threshold: Confidence threshold
+            gate_threshold_multiplier: Gate threshold adjustment multiplier
+            enable_bone_constraints: Enable structure constraints
+            enable_rts_smoother: Enable RTS smoother
+            enable_verbose_logging: Enable verbose logging
             
         Returns:
-            Tuple[List[Dict]]: ノイズ除去済みPOSE_KEYPOINTバッチ
+            Tuple[List[Dict]]: Denoised POSE_KEYPOINT batch
         """
         
         try:
-            # 入力チェック
+            # Input validation
             if not pose_keypoint or len(pose_keypoint) == 0:
                 if enable_verbose_logging:
-                    print("⚠️ KeyPoint Denoiser: 入力データが空です")
+                    pass
                 return (pose_keypoint,)
             
             if len(pose_keypoint) < 3:
                 if enable_verbose_logging:
-                    print(f"⚠️ KeyPoint Denoiser: バッチサイズ不足（{len(pose_keypoint)}フレーム）- 最小3フレーム必要")
+                    pass
                 return (pose_keypoint,)
             
-            # 設定作成
+            # Create configuration
             base_config = get_config_by_name(processing_mode)
             
-            # カスタムパラメータで設定を調整
+            # Adjust configuration with custom parameters
             custom_config = create_custom_config(
                 # ベース設定から開始
                 qv_base=base_config.qv_base * (denoising_strength ** 0.5),
@@ -144,43 +144,29 @@ class ProportionChangerKeypointDenoiser:
             )
             
             if enable_verbose_logging:
-                print(f"\n🚀 KeyPoint Denoiser 開始")
-                print(f"📥 入力フレーム数: {len(pose_keypoint)}")
-                print(f"⚙️ 処理モード: {processing_mode}")
-                print(f"💪 デノイジング強度: {denoising_strength}")
-                print(f"🎯 ゲート閾値: {custom_config.gate_threshold:.2f}")
-                print(f"🔍 信頼度閾値: {custom_config.conf_min}")
-                print(f"🦴 構造制約: {'ON' if enable_bone_constraints else 'OFF'}")
-                print(f"🎢 RTSスムーザ: {'ON' if enable_rts_smoother else 'OFF'}")
-                print("-" * 60)
+                pass
             
-            # メインデノイジング処理実行
+            # Execute main denoising process
             denoised_result = denoise_pose_keypoints_kalman(
                 pose_keypoint_batch=pose_keypoint,
                 config=custom_config
             )
             
             if enable_verbose_logging:
-                print(f"\n✅ KeyPoint Denoiser 完了")
-                print(f"📤 出力フレーム数: {len(denoised_result)}")
-                if len(denoised_result) == len(pose_keypoint):
-                    print("✅ フレーム数保持: OK")
-                else:
-                    print(f"⚠️ フレーム数変化: {len(pose_keypoint)} → {len(denoised_result)}")
-                print("=" * 60)
+                pass
             
             return (denoised_result,)
             
         except Exception as e:
-            error_msg = f"KeyPoint Denoiser エラー: {str(e)}"
-            print(f"\n💥 {error_msg}")
+            error_msg = f"KeyPoint Denoiser error: {str(e)}"
+            pass
             
             if enable_verbose_logging:
-                print("\n🔍 詳細エラー情報:")
+                pass
                 traceback.print_exc()
                 print("-" * 60)
             
-            # エラー時は元データを返す
+            # Return original data on error
             return (pose_keypoint,)
 
     @classmethod 
@@ -277,13 +263,13 @@ class ProportionChangerKeypointDenoiserAdvanced:
         """
         
         try:
-            # 入力チェック
+            # Input validation
             if not pose_keypoint or len(pose_keypoint) < 3:
                 if enable_verbose_logging:
-                    print(f"⚠️ Advanced Denoiser: バッチサイズ不足（{len(pose_keypoint) if pose_keypoint else 0}フレーム）")
+                    pass
                 return (pose_keypoint,)
             
-            # カスタム詳細設定作成
+            # Create custom detailed configuration
             advanced_config = create_custom_config(
                 # カルマンフィルタ
                 qv_base=kalman_process_noise**2,
@@ -315,31 +301,22 @@ class ProportionChangerKeypointDenoiserAdvanced:
             )
             
             if enable_verbose_logging:
-                print(f"\n🔧 Advanced KeyPoint Denoiser 開始")
-                print(f"📥 入力フレーム数: {len(pose_keypoint)}")
-                print(f"🔮 カルマンプロセスノイズ: {kalman_process_noise}")
-                print(f"🔮 カルマン測定ノイズ: {kalman_measurement_noise}")
-                print(f"🎯 ゲート閾値: {gate_threshold}")
-                print(f"🛡️ ダンス保護: スピン{enable_spin_protection}, ジャンプ{enable_jump_protection}, 協調{enable_coordination_protection}")
-                print(f"🦴 構造制約: {enable_bone_constraints} (反復{bone_constraint_iterations}回)")
-                print("-" * 70)
+                pass
             
-            # メイン処理実行
+            # Execute main processing
             denoised_result = denoise_pose_keypoints_kalman(
                 pose_keypoint_batch=pose_keypoint,
                 config=advanced_config
             )
             
             if enable_verbose_logging:
-                print(f"\n✅ Advanced KeyPoint Denoiser 完了")
-                print(f"📤 出力フレーム数: {len(denoised_result)}")
-                print("=" * 70)
+                pass
             
             return (denoised_result,)
             
         except Exception as e:
-            error_msg = f"Advanced KeyPoint Denoiser エラー: {str(e)}"
-            print(f"\n💥 {error_msg}")
+            error_msg = f"Advanced KeyPoint Denoiser error: {str(e)}"
+            pass
             
             if enable_verbose_logging:
                 traceback.print_exc()

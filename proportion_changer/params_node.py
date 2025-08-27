@@ -1,8 +1,8 @@
 """
-ProportionChangerParams node - POSE_KEYPOINT直接編集ノード
-ComfyUI-ultimate-openpose-editor-toyxyzからの移植版
+ProportionChangerParams node - Direct POSE_KEYPOINT editing node
+Ported from ComfyUI-ultimate-openpose-editor-toyxyz
 
-主要パラメータでpose_keypointデータを調整し、画像生成なしでキーポイント変換のみ実行
+Adjusts pose_keypoint data with key parameters, performing only keypoint transformation without image generation
 """
 
 import json
@@ -12,8 +12,8 @@ import math
 
 class ProportionChangerParams:
     """
-    POSE_KEYPOINTを直接編集するパラメータ調整ノード
-    画像レンダリングなしでキーポイント変換のみ実行
+    Parameter adjustment node for direct POSE_KEYPOINT editing
+    Performs only keypoint transformation without image rendering
     """
     
     @classmethod
@@ -22,7 +22,7 @@ class ProportionChangerParams:
             "optional": {
                 "pose_keypoint": ("POSE_KEYPOINT", {"default": None}),
                 
-                # === BODY KEYPOINTS (上から下の順) ===
+                # === BODY KEYPOINTS (top to bottom order) ===
                 "head_scale": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 5.0, "step": 0.01}),
                 "neck_scale": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01}),
                 "shoulder_scale": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01}),
@@ -31,7 +31,7 @@ class ProportionChangerParams:
                 "pelvis_scale": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01}),
                 "leg_scale": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01}),
                 
-                # === FACE KEYPOINTS (顔の上から下の順) ===
+                # === FACE KEYPOINTS (face top to bottom order) ===
                 "face_shape_scale": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 5.0, "step": 0.01}),
                 "eyebrow_height": ("FLOAT", {"default": 0.0, "min": -100.0, "max": 100.0, "step": 0.1}),
                 "left_eyebrow_scale": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 5.0, "step": 0.01}),
@@ -65,7 +65,7 @@ class ProportionChangerParams:
         パラメータが変更された場合は必ず再実行されるようにする
         ComfyUIのキャッシュ回避のため
         """
-        # パラメータの値をハッシュ化して、変更を検出
+        # Hash parameter values to detect changes
         import hashlib
         param_str = str(sorted(kwargs.items()))
         return hashlib.md5(param_str.encode()).hexdigest()
@@ -88,7 +88,7 @@ class ProportionChangerParams:
         Returns:
             adjusted_pose_keypoint: 調整後のPOSE_KEYPOINTデータ
         """
-        # パラメータを辞書形式に変換
+        # Convert parameters to dictionary format
         params = {
             "pelvis_scale": pelvis_scale,
             "torso_scale": torso_scale,
@@ -116,7 +116,7 @@ class ProportionChangerParams:
         
         if pose_keypoint:
             
-            # 入力データの詳細を確認
+            # Check input data details
             if isinstance(pose_keypoint, dict):
                 frame_data = pose_keypoint
             elif isinstance(pose_keypoint, list) and len(pose_keypoint) > 0:
@@ -137,7 +137,7 @@ class ProportionChangerParams:
         if not pose_keypoint:
             return (pose_keypoint,)
         
-        # 全てのパラメータがデフォルト値の場合は何もしない
+        # Do nothing if all parameters are default values
         default_values = {
             "pelvis_scale": 1.0, "torso_scale": 1.0, "neck_scale": 1.0, "head_scale": 1.0,
             "eye_distance_scale": 1.0, "eye_height": 0.0, "eyebrow_height": 0.0,
@@ -148,29 +148,29 @@ class ProportionChangerParams:
             "rotate_angle": 0.0, "translate_x": 0.0, "translate_y": 0.0
         }
         
-        # 全ての値がデフォルトかチェック
+        # Check if all values are default
         all_default = True
         for key, default_val in default_values.items():
-            if abs(params.get(key, default_val) - default_val) > 0.001:  # 小さな数値誤差を許容
+            if abs(params.get(key, default_val) - default_val) > 0.001:  # Allow small numerical errors
                 all_default = False
                 break
         
         if all_default:
-            # デフォルト値でも処理を実行（キャッシュされた変更済みデータではなく、元データから処理）
+            # Execute processing even with default values (process from original data, not cached modified data)
             pass
         
         # POSE_KEYPOINTの形式を正規化 (dict形式の場合はリストに変換)
-        # 重要：元のオブジェクトを絶対に変更しないよう、必ずdeep copyを作成
+        # Important: Always create deep copy to never modify the original object
         if isinstance(pose_keypoint, dict):
             adjusted_pose = [copy.deepcopy(pose_keypoint)]
         elif isinstance(pose_keypoint, list):
             adjusted_pose = copy.deepcopy(pose_keypoint)
         else:
-            # 不明な型でも必ずコピーを返す
+            # Always return a copy even for unknown types
             return (copy.deepcopy(pose_keypoint),)
             
         
-        # 各フレームのデータを処理
+        # Process each frame data
         for frame_data in adjusted_pose:
             if not isinstance(frame_data, dict) or "people" not in frame_data:
                 continue
@@ -178,13 +178,13 @@ class ProportionChangerParams:
             canvas_width = frame_data.get("canvas_width", 512)
             canvas_height = frame_data.get("canvas_height", 768)
             
-            # 各人物のポーズデータを調整
+            # Adjust pose data for each person
             for person in frame_data["people"]:
                 self._adjust_person_pose(person, canvas_width, canvas_height, **params)
         
         
-        # 入力がdict形式だった場合は、単一のdictとして返す
-        # 重要：必ず新しいオブジェクトとして返すことで、元データへの参照を切断
+        # If input was dict format, return as single dict
+        # Important: Always return as new object to break references to original data
         if isinstance(pose_keypoint, dict):
             return (adjusted_pose[0],)
         else:
@@ -194,7 +194,7 @@ class ProportionChangerParams:
         """
         単一人物のポーズデータを調整
         """
-        # 基本パラメータ取得（デフォルト値も設定）
+        # Get basic parameters (set default values too)
         overall_scale = params.get("overall_scale", 1.0)
         rotate_angle = params.get("rotate_angle", 0.0)
         translate_x = params.get("translate_x", 0.0)
@@ -330,7 +330,7 @@ class ProportionChangerParams:
         else:
             current_hip_center = orig_hip_center
         
-        # 2. 胴体の調整（pelvis調整後のhip_centerを基準に、元のneckから）
+        # 2. Torso adjustment (from original neck, based on hip_center after pelvis adjustment)
         if torso_scale != 1.0:
             new_neck = [
                 current_hip_center[0] + (orig_neck[0] - orig_hip_center[0]) * torso_scale,
@@ -344,7 +344,7 @@ class ProportionChangerParams:
             current_neck = [orig_neck[0] + neck_offset[0], orig_neck[1] + neck_offset[1]]
             set_point(adjusted, KP["Neck"], current_neck)
         
-        # 3. 肩の調整（torso調整後のneckを基準に、元のshoulderから）
+        # 3. Shoulder adjustment (from original shoulder, based on neck after torso adjustment)
         orig_r_shoulder = get_point(original, KP["RShoulder"])
         orig_l_shoulder = get_point(original, KP["LShoulder"])
         
@@ -368,7 +368,7 @@ class ProportionChangerParams:
             if current_r_shoulder: set_point(adjusted, KP["RShoulder"], current_r_shoulder)
             if current_l_shoulder: set_point(adjusted, KP["LShoulder"], current_l_shoulder)
         
-        # 4. 首・頭の調整（torso調整後のneckを基準に、元のnose/head部位から）
+        # 4. Neck/head adjustment (from original nose/head parts, based on neck after torso adjustment)
         if neck_scale != 1.0 or head_scale != 1.0:
             # neck_scaleでnoseの位置を調整
             if neck_scale != 1.0:
@@ -422,7 +422,7 @@ class ProportionChangerParams:
                         head_moved = [orig_head_point[0] + neck_movement[0], orig_head_point[1] + neck_movement[1]]
                         set_point(adjusted, KP[head_kp], head_moved)
         
-        # 5. 腕の調整（shoulder調整後の位置を基準に、元のarm関節から）
+        # 5. Arm adjustment (from original arm joints, based on position after shoulder adjustment)
         if arm_scale != 1.0 and current_r_shoulder and current_l_shoulder:
             for side_prefix, current_shoulder, orig_shoulder in [
                 ("R", current_r_shoulder, orig_r_shoulder), 
@@ -454,7 +454,7 @@ class ProportionChangerParams:
                                 new_joint = [orig_joint[0] + shoulder_movement[0], orig_joint[1] + shoulder_movement[1]]
                                 set_point(adjusted, KP[kp_name], new_joint)
         
-        # 6. 脚の調整（pelvis調整後の位置を基準に、元のleg関節から）
+        # 6. Leg adjustment (from original leg joints, based on position after pelvis adjustment)
         current_r_hip = get_point(adjusted, KP["RHip"])
         current_l_hip = get_point(adjusted, KP["LHip"])
         
@@ -530,7 +530,7 @@ class ProportionChangerParams:
         if not keypoints or len(keypoints) < 210:  # 70 face keypoints * 3 = 210
             return keypoints
             
-        # パラメータ取得
+        # Get parameters
         eye_distance_scale = params.get("eye_distance_scale", 1.0)
         eye_height = params.get("eye_height", 0.0)
         eyebrow_height = params.get("eyebrow_height", 0.0)
@@ -542,7 +542,7 @@ class ProportionChangerParams:
         nose_scale_face = params.get("nose_scale_face", 1.0)
         face_shape_scale = params.get("face_shape_scale", 1.0)
         
-        # 全てデフォルト値の場合は何もしない
+        # Do nothing if all are default values
         if (eye_distance_scale == 1.0 and eye_height == 0.0 and eyebrow_height == 0.0 and
             left_eye_scale == 1.0 and right_eye_scale == 1.0 and 
             left_eyebrow_scale == 1.0 and right_eyebrow_scale == 1.0 and
@@ -551,7 +551,7 @@ class ProportionChangerParams:
             
         adjusted = keypoints.copy()
         
-        # OpenPose face keypoint groups (標準的な定義)
+        # OpenPose face keypoint groups (standard definition)
         FACE_KP_GROUPS = {
             "Left_Eye": list(range(42, 48)),        # 左目 (42-47)
             "Right_Eye": list(range(36, 42)),       # 右目 (36-41)
@@ -665,14 +665,14 @@ class ProportionChangerParams:
                 eyes_center_x = (left_eye_center_x + right_eye_center_x) / 2
                 eyes_center_y = (left_eye_center_y + right_eye_center_y) / 2
                 
-                # 各目を中点から離すようにスケーリング
+                # Scale each eye away from center point
                 for group_name, center_x, center_y in [
                     ("Left_Eye", left_eye_center_x, left_eye_center_y),
                     ("Right_Eye", right_eye_center_x, right_eye_center_y)
                 ]:
                     for idx in FACE_KP_GROUPS[group_name]:
                         if idx * 3 + 2 < len(adjusted) and adjusted[idx * 3 + 2] > 0:
-                            # 目の中心から全体の中心への方向をスケーリング
+                            # Scale direction from eye center to overall center
                             rel_x = (center_x - eyes_center_x) * eye_distance_scale
                             rel_y = (center_y - eyes_center_y) * eye_distance_scale
                             
@@ -698,11 +698,11 @@ class ProportionChangerParams:
             
         hands_scale = params.get("hands_scale", 1.0)
         
-        # wrist_movementがNoneの場合はデフォルト値を設定
+        # Set default value if wrist_movement is None
         if wrist_movement is None:
             wrist_movement = [0.0, 0.0]
             
-        # hands_scaleが1.0でwrist_movementも0の場合は何もしない
+        # Do nothing if hands_scale is 1.0 and wrist_movement is 0
         if hands_scale == 1.0 and wrist_movement[0] == 0.0 and wrist_movement[1] == 0.0:
             return keypoints
             
@@ -714,21 +714,23 @@ class ProportionChangerParams:
         wrist_conf = adjusted[2]
         
         if wrist_conf <= 0:
-            # 手首が検出されていない場合でも、手全体を移動
+            # Move entire hand even when wrist is not detected
             if wrist_movement[0] != 0.0 or wrist_movement[1] != 0.0:
-                for i in range(0, len(adjusted), 3):
-                    if i + 2 < len(adjusted) and adjusted[i + 2] > 0:
+                adjusted_len = len(adjusted)
+                for i in range(0, adjusted_len, 3):
+                    if i + 2 < adjusted_len and adjusted[i + 2] > 0:
                         adjusted[i] += wrist_movement[0]
                         adjusted[i + 1] += wrist_movement[1]
             return adjusted
         
         # Step 1: 手首を基準として hands_scale でスケーリング
         if hands_scale != 1.0:
-            for i in range(3, len(adjusted), 3):  # 手首以外の関節から開始
-                if i + 2 < len(adjusted) and adjusted[i + 2] > 0:  # 信頼度チェック
+            adjusted_len = len(adjusted)
+            for i in range(3, adjusted_len, 3):  # Start from joints other than wrist
+                if i + 2 < adjusted_len and adjusted[i + 2] > 0:
                     x, y = adjusted[i], adjusted[i + 1]
                     
-                    # 手首からの相対位置でスケーリング
+                    # Scale by relative position from wrist
                     scaled_x = wrist_x + (x - wrist_x) * hands_scale
                     scaled_y = wrist_y + (y - wrist_y) * hands_scale
                     

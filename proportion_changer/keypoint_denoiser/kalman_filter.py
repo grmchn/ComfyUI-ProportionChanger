@@ -103,7 +103,7 @@ class KeypointKalmanFilter:
         except np.linalg.LinAlgError:
             # 特異行列の場合は棄却
             if self.config.verbose_logging:
-                print(f"⚠️ 特異行列検出: 観測棄却")
+                pass
             return self.x[:2].copy(), False, float('inf')
         
         gate_threshold = self.config.gate_threshold
@@ -119,7 +119,7 @@ class KeypointKalmanFilter:
         
         # デバッグ情報（最初の数回のみ）
         if self.config.verbose_logging and len(self.measurement_history) < 5:
-            print(f"🔍 キーポイント{getattr(self, 'keypoint_id', '?')}: Mahalanobis={mahalanobis_dist2:.2f}, 閾値={gate_threshold:.2f}")
+            pass
         
         if mahalanobis_dist2 < gate_threshold:
             # 観測受け入れ：更新実行
@@ -169,7 +169,7 @@ class KeypointKalmanFilter:
         self.last_confidence = confidence
         
         if self.config.verbose_logging:
-            print(f"🔄 フィルタリセット: pos=[{measurement[0]:.3f}, {measurement[1]:.3f}]")
+            pass
 
 def initialize_kalman_filters(first_valid_frame: List[List[float]], 
                              body_scale: float, 
@@ -193,10 +193,10 @@ def initialize_kalman_filters(first_valid_frame: List[List[float]],
             filters[keypoint_idx] = kf
             
             if config.verbose_logging:
-                print(f"🔮 フィルタ初期化: キーポイント{keypoint_idx} pos=[{keypoint[0]:.3f}, {keypoint[1]:.3f}]")
+                pass
     
     if config.verbose_logging:
-        print(f"✅ カルマンフィルタ初期化完了: {len(filters)}個")
+        pass
     
     return filters
 
@@ -241,7 +241,7 @@ def update_kalman_filters_batch(filters: Dict[int, KeypointKalmanFilter],
                     updated_pos, accepted, mahal_dist = kf.update(measurement, weak_confidence, orientation_score)
                     
                     if kf.config.verbose_logging and accepted:
-                        print(f"🛡️ 保護適用: キーポイント{kp_idx} (係数={protection_factor:.1f})")
+                        pass
             
             positions[kp_idx] = updated_pos
             acceptances[kp_idx] = accepted

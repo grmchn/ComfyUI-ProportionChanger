@@ -59,7 +59,7 @@ def calculate_enhanced_orientation_score(pose_data: List[List[float]], verbose: 
     """
     if len(pose_data) < 25:
         if verbose:
-            print("      ⚠️ キーポイント数不足（<25）")
+            pass
         return 0.5
     
     # 肩幅・腰幅取得
@@ -98,9 +98,7 @@ def calculate_enhanced_orientation_score(pose_data: List[List[float]], verbose: 
     final_score = np.clip(base_orientation + face_bonus, 0, 1)
     
     if verbose:
-        print(f"      📐 肩幅={shoulder_w:.4f}, 腰幅={hip_w:.4f}")
-        print(f"      📐 基本正面度={base_orientation:.3f}, 顔補強={face_bonus:.3f}")
-        print(f"      📐 最終正面度スコア={final_score:.3f}")
+        pass
     
     return final_score
 
@@ -154,9 +152,7 @@ def calculate_joint_distances_enhanced(pose_data: List[List[float]], verbose: bo
             distances[joint_name] = distance(pose_data[idx1][:2], pose_data[idx2][:2])
     
     if verbose:
-        print(f"      📏 検出関節数: {len(distances)}")
-        for joint_name, dist in distances.items():
-            print(f"      📏   {joint_name}: {dist:.4f}")
+        pass
     
     return distances
 
@@ -167,8 +163,7 @@ def analyze_body_statistics_enhanced(pose_keypoint_batch: List, config: Denoiser
     """
     
     if config.verbose_logging:
-        print("  🔍 [Phase 1-2] 体統計分析開始...")
-        print(f"    📊 総フレーム数: {len(pose_keypoint_batch)}")
+        pass
     
     # 各部位の距離統計を収集（正面フレーム優先）
     joint_distance_stats = {
@@ -187,7 +182,7 @@ def analyze_body_statistics_enhanced(pose_keypoint_batch: List, config: Denoiser
     front_facing_frames = []  # 高正面度フレームのインデックス
     
     if config.verbose_logging:
-        print("    📐 Phase 1-2a: 全フレーム正面度分析...")
+        pass
     
     # Phase 1: 全フレームで正面度スコア計算
     for frame_idx, frame_data in enumerate(pose_keypoint_batch):
@@ -209,11 +204,10 @@ def analyze_body_statistics_enhanced(pose_keypoint_batch: List, config: Denoiser
     
     if config.verbose_logging:
         avg_orientation = np.mean(orientation_scores) if orientation_scores else 0.5
-        print(f"    📐 平均正面度: {avg_orientation:.3f}")
-        print(f"    📐 高正面度フレーム: {len(front_facing_frames)}個 (閾値>{config.orientation_threshold})")
+        pass
     
     if config.verbose_logging:
-        print("    📏 Phase 1-2b: 骨長統計データ収集...")
+        pass
     
     # Phase 2: 正面フレーム群で骨長基準学習
     for frame_idx, frame_data in enumerate(pose_keypoint_batch):
@@ -239,7 +233,7 @@ def analyze_body_statistics_enhanced(pose_keypoint_batch: List, config: Denoiser
                     joint_distance_stats[joint_name].append(distances[joint_name])
     
     if config.verbose_logging:
-        print("    🧮 Phase 1-2c: 頑健統計処理（Tukeyフェンス）...")
+        pass
     
     # Phase 3: 頑健統計による基準値計算（Tukeyのフェンス or MAD使用）
     body_references = {}
@@ -271,10 +265,10 @@ def analyze_body_statistics_enhanced(pose_keypoint_batch: List, config: Denoiser
                 
                 if config.verbose_logging:
                     ref = body_references[joint_name]
-                    print(f"      📊 {joint_name}: median={ref['median']:.4f}, samples={ref['sample_count']}, outliers={ref['outliers_removed']}")
+                    pass
     
     if config.verbose_logging:
-        print("    💪 Phase 1-2d: 体スケール決定...")
+        pass
     
     # Phase 4: 体スケール決定（複数部位からミックス推定）
     primary_scale_candidates = []
@@ -294,7 +288,7 @@ def analyze_body_statistics_enhanced(pose_keypoint_batch: List, config: Denoiser
             primary_scale_candidates.append(estimated_scale)
             
             if config.verbose_logging:
-                print(f"      💪 {joint_name} -> 体スケール推定: {estimated_scale:.4f}")
+                pass
     
     # 頑健な体スケール決定（中央値使用）
     if primary_scale_candidates:
@@ -302,7 +296,7 @@ def analyze_body_statistics_enhanced(pose_keypoint_batch: List, config: Denoiser
     else:
         primary_body_scale = config.fallback_body_scale
         if config.verbose_logging:
-            print(f"      ⚠️ 体スケール推定失敗、フォールバック値使用: {primary_body_scale}")
+            pass
     
     # 正面向き比率計算
     front_facing_ratio = len(front_facing_frames) / max(len(pose_keypoint_batch), 1)
@@ -321,10 +315,6 @@ def analyze_body_statistics_enhanced(pose_keypoint_batch: List, config: Denoiser
     }
     
     if config.verbose_logging:
-        print(f"  ✅ [Phase 1-2] 体統計分析完了")
-        print(f"    💪 最終体スケール: {primary_body_scale:.4f}")
-        print(f"    🎯 正面向き比率: {front_facing_ratio:.2%}")
-        print(f"    📊 データ品質スコア: {result['quality_score']:.3f}")
-        print(f"    🔍 有効関節統計: {len(body_references)}種類")
+        pass
     
     return result

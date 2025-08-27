@@ -99,7 +99,10 @@ class ProportionChangerDWPoseDetector:
                 pose_keypoint_frame["canvas_height"] = height
                 pose_keypoints.append(pose_keypoint_frame)
                 
+            except (RuntimeError, ValueError, OSError) as e:
+                print(f"Detection error: {e}")
             except Exception as e:
+                print(f"Unexpected detection error: {e}")
                 # Create empty pose data for failed detection
                 empty_pose = {
                     "version": "1.0",
@@ -124,16 +127,18 @@ class ProportionChangerDWPoseDetector:
             # Normalize body keypoints
             if "pose_keypoints_2d" in person:
                 body_kpts = person["pose_keypoints_2d"]
-                for i in range(0, len(body_kpts), 3):
-                    if i+1 < len(body_kpts):
+                body_len = len(body_kpts)
+                for i in range(0, body_len, 3):
+                    if i+1 < body_len:
                         body_kpts[i] = body_kpts[i] / canvas_width      # x coordinate
                         body_kpts[i+1] = body_kpts[i+1] / canvas_height  # y coordinate
             
             # Normalize face keypoints
             if "face_keypoints_2d" in person:
                 face_kpts = person["face_keypoints_2d"]
-                for i in range(0, len(face_kpts), 3):
-                    if i+1 < len(face_kpts):
+                face_len = len(face_kpts)
+                for i in range(0, face_len, 3):
+                    if i+1 < face_len:
                         face_kpts[i] = face_kpts[i] / canvas_width
                         face_kpts[i+1] = face_kpts[i+1] / canvas_height
             
@@ -141,8 +146,9 @@ class ProportionChangerDWPoseDetector:
             for hand_key in ["hand_left_keypoints_2d", "hand_right_keypoints_2d"]:
                 if hand_key in person:
                     hand_kpts = person[hand_key]
-                    for i in range(0, len(hand_kpts), 3):
-                        if i+1 < len(hand_kpts):
+                    hand_len = len(hand_kpts)
+                    for i in range(0, hand_len, 3):
+                        if i+1 < hand_len:
                             hand_kpts[i] = hand_kpts[i] / canvas_width
                             hand_kpts[i+1] = hand_kpts[i+1] / canvas_height
         

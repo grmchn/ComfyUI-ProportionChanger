@@ -21,12 +21,12 @@ except ImportError:
 def log_phase_start(phase_num: int, phase_name: str, verbose: bool = True):
     """段階開始ログ"""
     if verbose:
-        print(f"\n🔥 [Phase {phase_num}] {phase_name} 開始...")
+        pass
 
 def log_phase_end(phase_num: int, phase_name: str, elapsed_ms: float, verbose: bool = True):
     """段階終了ログ"""
     if verbose:
-        print(f"✅ [Phase {phase_num}] {phase_name} 完了 ({elapsed_ms:.1f}ms)")
+        pass
 
 def preprocess_keypoints(pose_keypoint_batch: List, config: DenoiserConfig) -> List:
     """
@@ -36,7 +36,7 @@ def preprocess_keypoints(pose_keypoint_batch: List, config: DenoiserConfig) -> L
     log_phase_start(1, "前処理・信頼度ゲーティング", config.verbose_logging)
     
     if config.verbose_logging:
-        print(f"  📥 入力バッチサイズ: {len(pose_keypoint_batch)}フレーム")
+        pass
     
     # 現時点では基本的なコピーのみ（将来的に拡張予定）
     preprocessed = copy.deepcopy(pose_keypoint_batch)
@@ -56,7 +56,7 @@ def preprocess_keypoints(pose_keypoint_batch: List, config: DenoiserConfig) -> L
                         low_confidence_count += 1
         
         low_conf_rate = low_confidence_count / max(total_keypoints, 1)
-        print(f"  📊 低信頼度キーポイント率: {low_conf_rate:.1%} (閾値<{config.conf_min})")
+        pass
     
     elapsed_ms = (time.time() - start_time) * 1000
     log_phase_end(1, "前処理", elapsed_ms, config.verbose_logging)
@@ -80,14 +80,14 @@ def apply_kalman_filtering(pose_keypoint_batch: List, body_stats: Dict, config: 
     
     # カルマンフィルタ初期化
     if config.verbose_logging:
-        print("  🔮 カルマンフィルタ初期化...")
+        pass
     
     first_frame_people = get_frame_pose_data(pose_keypoint_batch[0])
     first_valid_frame = extract_pose_keypoints_from_frame(first_frame_people)
     kalman_filters = initialize_kalman_filters(first_valid_frame, body_stats['primary_scale'], config)
     
     if config.verbose_logging:
-        print(f"  🔮 初期化完了: {len(kalman_filters)}個のフィルタ")
+        pass
     
     # 進捗表示用
     progress_step = max(1, T // 10)
@@ -129,14 +129,13 @@ def apply_kalman_filtering(pose_keypoint_batch: List, body_stats: Dict, config: 
         # 進捗表示
         if config.verbose_logging and frame_idx % progress_step == 0:
             progress = (frame_idx + 1) / T
-            print(f"  ⚡ フレーム処理進捗: {progress:.0%} ({frame_idx+1}/{T})")
+            pass
     
     # 統計情報
     acceptance_rate = total_accepted / max(total_observations, 1)
     
     if config.verbose_logging:
-        print(f"  📊 観測受け入れ率: {acceptance_rate:.1%}")
-        print(f"  📊 総観測数: {total_observations}, 受け入れ数: {total_accepted}")
+        pass
     
     elapsed_ms = (time.time() - start_time) * 1000
     log_phase_end(3, "カルマンフィルタ処理", elapsed_ms, config.verbose_logging)
@@ -155,7 +154,7 @@ def apply_structural_constraints(filtered_positions: np.ndarray,
     
     if not config.enable_bone_constraints:
         if config.verbose_logging:
-            print("  ⏭️ 構造投影無効化: スキップ")
+            pass
         log_phase_end(5, "構造投影（スキップ）", 0, config.verbose_logging)
         return filtered_positions.copy()
     
@@ -167,8 +166,7 @@ def apply_structural_constraints(filtered_positions: np.ndarray,
     frames_processed = 0
     
     if config.verbose_logging:
-        print(f"  🦴 投影間隔: {config.projection_interval}フレームごと")
-        print(f"  🦴 最大反復数: {config.max_iterations}")
+        pass
     
     # 投影間隔に従って処理
     for frame_idx in range(0, T, config.projection_interval):
@@ -210,13 +208,11 @@ def apply_structural_constraints(filtered_positions: np.ndarray,
         # 進捗表示
         if config.verbose_logging and frame_idx % (config.projection_interval * 10) == 0:
             progress = frame_idx / T
-            print(f"  🦴 投影進捗: {progress:.0%}")
+            pass
     
     if config.verbose_logging:
         avg_adjustments = total_adjustments / max(frames_processed, 1)
-        print(f"  📊 処理フレーム数: {frames_processed}")
-        print(f"  📊 総調整回数: {total_adjustments}")
-        print(f"  📊 平均調整数/フレーム: {avg_adjustments:.2f}")
+        pass
     
     elapsed_ms = (time.time() - start_time) * 1000
     log_phase_end(5, "構造投影", elapsed_ms, config.verbose_logging)
@@ -237,13 +233,13 @@ def apply_post_smoothing(filtered_positions: np.ndarray,
     
     if config.use_rts_smoother:
         if config.verbose_logging:
-            print("  🎢 RTSスムーザ適用（簡略実装）...")
+            pass
         # RTSスムーザの簡略実装（将来的に拡張）
         # 現在は軽いスムージングで代用
         
     else:
         if config.verbose_logging:
-            print("  🎢 軽量スムージング適用...")
+            pass
     
     # 末端キーポイント（顔・手首・足首）に軽いスムージング
     try:
@@ -271,8 +267,7 @@ def apply_post_smoothing(filtered_positions: np.ndarray,
                     smoothing_applied += 1
     
     if config.verbose_logging:
-        print(f"  📊 スムージング適用箇所: {smoothing_applied}")
-        print(f"  📊 対象キーポイント: {len(target_indices)}個")
+        pass
     
     elapsed_ms = (time.time() - start_time) * 1000
     log_phase_end(6, "後処理スムージング", elapsed_ms, config.verbose_logging)
@@ -327,8 +322,7 @@ def apply_gap_interpolation(smoothed_positions: np.ndarray,
             # 長ギャップは現在の値を保持（補間しない）
     
     if config.verbose_logging:
-        print(f"  📊 検出ギャップ数: {gaps_found}")
-        print(f"  📊 補間済みギャップ数: {gaps_interpolated}")
+        pass
     
     elapsed_ms = (time.time() - start_time) * 1000
     log_phase_end(7, "ギャップ補間", elapsed_ms, config.verbose_logging)
@@ -413,17 +407,13 @@ def denoise_pose_keypoints_kalman(pose_keypoint_batch: List,
     
     if len(pose_keypoint_batch) < 3:
         if config.verbose_logging:
-            print("⚠️ バッチサイズ不足（<3フレーム）: 処理スキップ")
+            pass
         return pose_keypoint_batch
     
     total_start_time = time.time()
     
     if config.verbose_logging:
-        print(f"\n{'='*80}")
-        print(f"🚀 KeyPoint Denoiser 実行開始")
-        print(f"{'='*80}")
-        print(f"📥 入力: {len(pose_keypoint_batch)}フレーム")
-        print(f"⚙️ 設定: 詳細ログ{'ON' if config.verbose_logging else 'OFF'}, 骨長制約{'ON' if config.enable_bone_constraints else 'OFF'}")
+        pass
     
     try:
         # Phase 1: 前処理
@@ -464,24 +454,13 @@ def denoise_pose_keypoints_kalman(pose_keypoint_batch: List,
         rejection_rate = gated_keypoints / max(total_keypoints, 1)
         
         if config.verbose_logging:
-            print(f"\n{'='*80}")
-            print(f"✨ KeyPoint Denoiser 処理完了!")
-            print(f"{'='*80}")
-            print(f"⏱️  総処理時間: {total_elapsed_ms:.1f}ms")
-            print(f"📊 ゲート棄却率: {rejection_rate:.1%}")
-            print(f"📊 品質向上推定: {(1-rejection_rate)*body_stats['quality_score']:.1%}")
-            print(f"🎯 体スケール: {body_stats['primary_scale']:.4f}")
-            print(f"🎯 正面向き比率: {body_stats['orientation_stats']['front_facing_ratio']:.2%}")
-            print(f"📈 データ品質: {body_stats['quality_score']:.3f}")
-            print(f"{'='*80}")
+            pass
         
         return result_batch
         
     except Exception as e:
         if config.verbose_logging:
-            print(f"\n💥 処理エラー: {str(e)}")
-            import traceback
-            traceback.print_exc()
+            pass
         
-        # エラー時は元データを返す
+        # Return original data on error
         return pose_keypoint_batch

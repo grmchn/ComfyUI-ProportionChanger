@@ -58,8 +58,11 @@ class ProportionChangerInterpolator:
                 pose_keypoint, interpolation_frames, method
             )
             return (interpolated_result,)
+        except (ValueError, TypeError, KeyError) as e:
+            print(f"Interpolation error: {e}")
+            return (pose_keypoint,)  # Return original on error
         except Exception as e:
-            print(f"Error during interpolation: {e}")
+            print(f"Unexpected interpolation error: {e}")
             return (pose_keypoint,)  # Return original on error
     
     def _process_sequence_interpolation(self, sequence: List[Dict], interpolation_frames: int, method: str) -> List[Dict]:
