@@ -1,5 +1,7 @@
 # ComfyUI-ProportionChanger
 
+日本語 | [English README](README.md)
+
 > **注意**: このREADMEは[Claude Code](https://claude.ai/code) AI支援開発ツールを使用して自動生成されました。
 
 **ComfyUI用の高度なDWPoseベース体型プロポーション調整・キーポイント処理システム**
@@ -31,7 +33,7 @@
 1. `custom_nodes`フォルダにこのリポジトリをクローン：
 ```bash
 cd ComfyUI/custom_nodes
-git clone https://github.com/[your-repo]/ComfyUI-ProportionChanger.git
+git clone https://github.com/grmchn/ComfyUI-ProportionChanger.git
 ```
 
 2. 依存関係をインストール：
@@ -45,14 +47,17 @@ pip install -r requirements.txt
 ## 依存関係
 
 ### 必要なモデル
-以下のモデルをダウンロードして正しいディレクトリに配置する必要があります：
+**自動ダウンロード機能あり** - 初回実行時に自動でダウンロードされます！
 
-**DWPoseモデル** (`unianimate/models/DWPose/`に配置):
+**DWPoseモデル** (自動で`unianimate/models/DWPose/`に配置):
 - `dw-ll_ucoco_384_bs5.torchscript.pt` - メインポーズ検出モデル
 - `yolox_l.torchscript.pt` - オブジェクト検出モデル
 
-**ダウンロードリンク**:
-- [Hugging Face モデルリポジトリ](https://huggingface.co/Kijai/WanVideo_comfy/tree/main)
+**ダウンロード元**:
+- `yolox_l.torchscript.pt`: [hr16/yolox-onnx](https://huggingface.co/hr16/yolox-onnx)
+- `dw-ll_ucoco_384_bs5.torchscript.pt`: [hr16/DWPose-TorchScript-BatchSize5](https://huggingface.co/hr16/DWPose-TorchScript-BatchSize5)
+
+> 💡 **手動ダウンロード不要**: モデルファイルが存在しない場合、ノード初回実行時にHugging Faceから自動ダウンロードされます。
 
 ### Python依存関係
 完全なリストは`requirements.txt`を参照。主な依存関係：

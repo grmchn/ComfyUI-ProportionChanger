@@ -1,5 +1,7 @@
 # ComfyUI-ProportionChanger
 
+[日本語 README](README_ja.md) | English
+
 > **Note**: This README was automatically generated using [Claude Code](https://claude.ai/code) AI-assisted development tools.
 
 **Advanced DWPose-based body proportion manipulation and keypoint processing for ComfyUI**
@@ -31,7 +33,7 @@ Transform body proportions, manipulate pose keypoints, and create more natural a
 1. Clone this repository into your `custom_nodes` folder:
 ```bash
 cd ComfyUI/custom_nodes
-git clone https://github.com/[your-repo]/ComfyUI-ProportionChanger.git
+git clone https://github.com/grmchn/ComfyUI-ProportionChanger.git
 ```
 
 2. Install dependencies:
@@ -45,14 +47,17 @@ pip install -r requirements.txt
 ## Dependencies
 
 ### Required Models
-The following models need to be downloaded and placed in the correct directories:
+**Automatic Download Feature Available** - Models are automatically downloaded on first run!
 
-**DWPose Models** (place in `unianimate/models/DWPose/`):
+**DWPose Models** (automatically placed in `unianimate/models/DWPose/`):
 - `dw-ll_ucoco_384_bs5.torchscript.pt` - Main pose detection model
 - `yolox_l.torchscript.pt` - Object detection model
 
-**Download Links**:
-- [Hugging Face Model Repository](https://huggingface.co/Kijai/WanVideo_comfy/tree/main)
+**Download Sources**:
+- `yolox_l.torchscript.pt`: [hr16/yolox-onnx](https://huggingface.co/hr16/yolox-onnx)
+- `dw-ll_ucoco_384_bs5.torchscript.pt`: [hr16/DWPose-TorchScript-BatchSize5](https://huggingface.co/hr16/DWPose-TorchScript-BatchSize5)
+
+> 💡 **No Manual Download Required**: When model files don't exist, they are automatically downloaded from Hugging Face on first node execution.
 
 ### Python Dependencies
 See `requirements.txt` for complete list. Main dependencies include:
