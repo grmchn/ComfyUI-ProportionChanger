@@ -2,7 +2,7 @@
 name = "ComfyUI-ProportionChanger"
 description = "Advanced DWPose-based body proportion manipulation and keypoint processing for ComfyUI"
 version = "1.0.0"
-license = {text = "GPL-3.0"}
+license = {file = "LICENSE"}
 dependencies = ["torch", "numpy", "opencv-python", "tqdm"]
 authors = [
     {name = "ProportionChanger Contributors"}
