@@ -4,15 +4,12 @@ description = "Advanced DWPose-based body proportion manipulation and keypoint p
 version = "1.0.0"
 license = {file = "LICENSE"}
 dependencies = ["torch", "numpy", "opencv-python", "tqdm"]
-authors = [
-    {name = "ProportionChanger Contributors"}
-]
 
 [project.urls]
 Repository = "https://github.com/grmchn/ComfyUI-ProportionChanger.git"
 # Based on kijai/ComfyUI-WanVideoWrapper and toyxyz/ComfyUI-ultimate-openpose-editor
 
 [tool.comfy]
-PublisherId = "gear_machine"
+PublisherId = "gearmachine"
 DisplayName = "ComfyUI-ProportionChanger"
 Icon = ""
