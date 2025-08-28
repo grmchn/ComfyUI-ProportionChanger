@@ -1,9 +1,12 @@
-ftfy
-accelerate>=1.2.1
-einops
-diffusers>=0.33.0
-peft>=0.15.0
-sentencepiece>=0.2.0
-protobuf
-pyloudnorm
-gguf>=0.14.0
+# Core ML libraries
+torch
+numpy
+
+# Computer vision
+opencv-python
+
+# Progress bars and utilities  
+tqdm
+
+# Optional: ONNX Runtime (for ONNX-based pose detection - currently not used in active nodes)
+# onnxruntime
