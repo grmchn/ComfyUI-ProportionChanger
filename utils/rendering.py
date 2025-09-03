@@ -157,9 +157,8 @@ def draw_dwpose_body_and_foot(canvas, body_keypoints, W, H, pose_marker_size, sh
     debug_log(f"Body Debug - First 3 keypoints: {[(i, f'{keypoints[i][0]:.1f}, {keypoints[i][1]:.1f}', f'{confidences[i]:.3f}') for i in range(min(3, len(keypoints)))]}")
     
     if valid_keypoints == 0:
-        debug_log("Body Debug - No valid keypoints, drawing center test circle")
-        # Draw a small test circle to confirm canvas works
-        cv2.circle(canvas, (W//2, H//2), 10, (255, 255, 255), thickness=-1)
+        debug_log("Body Debug - No valid keypoints, returning black screen")
+        # Return black screen for failed pose detection
         return canvas
     
     # Draw limb connections (bones)
@@ -214,11 +213,7 @@ def draw_dwpose_body_and_foot(canvas, body_keypoints, W, H, pose_marker_size, sh
                     cv2.circle(canvas, (int(x), int(y)), pose_marker_size, colors[color_idx], thickness=-1)
                     points_drawn += 1
         
-        # Debug: if no points drawn, draw test points
-        if points_drawn == 0:
-            cv2.circle(canvas, (50, 50), 5, (255, 0, 0), thickness=-1)
-            cv2.circle(canvas, (W-50, 50), 5, (0, 255, 0), thickness=-1)
-            cv2.circle(canvas, (W//2, H-50), 5, (0, 0, 255), thickness=-1)
+        # No debug points - let failed poses show as black screen
     
     return canvas
 
