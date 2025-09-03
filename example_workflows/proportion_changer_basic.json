@@ -1,0 +1,601 @@
+{
+  "id": "f285009f-73b4-4a5d-a38e-fe4d2c454cb8",
+  "revision": 0,
+  "last_node_id": 17,
+  "last_link_id": 23,
+  "nodes": [
+    {
+      "id": 2,
+      "type": "ProportionChangerDWPoseDetector",
+      "pos": [
+        806.07958984375,
+        -669.2493286132812
+      ],
+      "size": [
+        297.3046875,
+        61.02589797973633
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 6
+        }
+      ],
+      "outputs": [
+        {
+          "name": "pose_keypoint",
+          "type": "POSE_KEYPOINT",
+          "links": [
+            2,
+            8
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUI-ProportionChanger",
+        "ver": "35c4327d7ebb6ec2f91b695df5ffb14d6cc6e68d",
+        "Node name for S&R": "ProportionChangerDWPoseDetector"
+      },
+      "widgets_values": [
+        0.3
+      ]
+    },
+    {
+      "id": 13,
+      "type": "ProportionChangerDWPoseDetector",
+      "pos": [
+        800.31884765625,
+        -546.5266723632812
+      ],
+      "size": [
+        297.3046875,
+        61.02589797973633
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 20
+        }
+      ],
+      "outputs": [
+        {
+          "name": "pose_keypoint",
+          "type": "POSE_KEYPOINT",
+          "links": [
+            12
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUI-ProportionChanger",
+        "ver": "35c4327d7ebb6ec2f91b695df5ffb14d6cc6e68d",
+        "Node name for S&R": "ProportionChangerDWPoseDetector"
+      },
+      "widgets_values": [
+        0.3
+      ]
+    },
+    {
+      "id": 1,
+      "type": "ProportionChangerReference",
+      "pos": [
+        1124.243896484375,
+        -619.7733764648438
+      ],
+      "size": [
+        309.8671875,
+        49.661338806152344
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pose_keypoint",
+          "type": "POSE_KEYPOINT",
+          "link": 2
+        },
+        {
+          "name": "reference_pose_keypoint",
+          "shape": 7,
+          "type": "POSE_KEYPOINT",
+          "link": 12
+        }
+      ],
+      "outputs": [
+        {
+          "name": "changed_pose_keypoint",
+          "type": "POSE_KEYPOINT",
+          "links": [
+            23
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUI-ProportionChanger",
+        "ver": "35c4327d7ebb6ec2f91b695df5ffb14d6cc6e68d",
+        "Node name for S&R": "ProportionChangerReference"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 4,
+      "type": "LoadImage",
+      "pos": [
+        228.58447265625,
+        -971.8245849609375
+      ],
+      "size": [
+        241.531005859375,
+        364.3951416015625
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            7
+          ]
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.50",
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "sample_girl.jpg",
+        "image"
+      ]
+    },
+    {
+      "id": 10,
+      "type": "ProportionChangerDWPoseRender",
+      "pos": [
+        1137.1202392578125,
+        -936.0288696289062
+      ],
+      "size": [
+        289.4697570800781,
+        226
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pose_keypoint",
+          "type": "POSE_KEYPOINT",
+          "link": 8
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            9
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUI-ProportionChanger",
+        "ver": "35c4327d7ebb6ec2f91b695df5ffb14d6cc6e68d",
+        "Node name for S&R": "ProportionChangerDWPoseRender"
+      },
+      "widgets_values": [
+        true,
+        false,
+        true,
+        true,
+        -1,
+        4,
+        3,
+        2
+      ]
+    },
+    {
+      "id": 5,
+      "type": "ProportionChangerDWPoseRender",
+      "pos": [
+        1133.717529296875,
+        -468.4149475097656
+      ],
+      "size": [
+        296.1150207519531,
+        226
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pose_keypoint",
+          "type": "POSE_KEYPOINT",
+          "link": 23
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            5
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUI-ProportionChanger",
+        "ver": "35c4327d7ebb6ec2f91b695df5ffb14d6cc6e68d",
+        "Node name for S&R": "ProportionChangerDWPoseRender"
+      },
+      "widgets_values": [
+        true,
+        false,
+        true,
+        true,
+        -1,
+        4,
+        3,
+        2
+      ]
+    },
+    {
+      "id": 11,
+      "type": "PreviewImage",
+      "pos": [
+        1459.3424072265625,
+        -931.5252075195312
+      ],
+      "size": [
+        210,
+        346.1227111816406
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 9
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.50",
+        "Node name for S&R": "PreviewImage"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 8,
+      "type": "LoadImage",
+      "pos": [
+        244.8310546875,
+        -518.05908203125
+      ],
+      "size": [
+        217.90322875976562,
+        337.8138122558594
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            19
+          ]
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.50",
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "mini_miku.png",
+        "image"
+      ]
+    },
+    {
+      "id": 17,
+      "type": "ImageResizeKJv2",
+      "pos": [
+        507.87646484375,
+        -489.91522216796875
+      ],
+      "size": [
+        264.0930480957031,
+        266
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 19
+        },
+        {
+          "name": "width",
+          "type": "INT",
+          "widget": {
+            "name": "width"
+          },
+          "link": 21
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "widget": {
+            "name": "height"
+          },
+          "link": 22
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            20
+          ]
+        },
+        {
+          "name": "width",
+          "type": "INT",
+          "links": null
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-kjnodes",
+        "ver": "f9118e0bbb39347ea7becb84ec03e397dfb4f644",
+        "Node name for S&R": "ImageResizeKJv2"
+      },
+      "widgets_values": [
+        528,
+        720,
+        "nearest-exact",
+        "crop",
+        "0, 0, 0",
+        "center",
+        2,
+        "cpu"
+      ]
+    },
+    {
+      "id": 6,
+      "type": "PreviewImage",
+      "pos": [
+        1452.858642578125,
+        -495.7300109863281
+      ],
+      "size": [
+        210,
+        336.8193054199219
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 5
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.3.50",
+        "Node name for S&R": "PreviewImage"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 7,
+      "type": "ImageResizeKJv2",
+      "pos": [
+        505.86053466796875,
+        -917.7463989257812
+      ],
+      "size": [
+        264.0930480957031,
+        266
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 7
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            6
+          ]
+        },
+        {
+          "name": "width",
+          "type": "INT",
+          "links": [
+            21
+          ]
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "links": [
+            22
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-kjnodes",
+        "ver": "f9118e0bbb39347ea7becb84ec03e397dfb4f644",
+        "Node name for S&R": "ImageResizeKJv2"
+      },
+      "widgets_values": [
+        512,
+        920,
+        "nearest-exact",
+        "crop",
+        "0, 0, 0",
+        "center",
+        2,
+        "cpu"
+      ]
+    }
+  ],
+  "links": [
+    [
+      2,
+      2,
+      0,
+      1,
+      0,
+      "POSE_KEYPOINT"
+    ],
+    [
+      5,
+      5,
+      0,
+      6,
+      0,
+      "IMAGE"
+    ],
+    [
+      6,
+      7,
+      0,
+      2,
+      0,
+      "IMAGE"
+    ],
+    [
+      7,
+      4,
+      0,
+      7,
+      0,
+      "IMAGE"
+    ],
+    [
+      8,
+      2,
+      0,
+      10,
+      0,
+      "POSE_KEYPOINT"
+    ],
+    [
+      9,
+      10,
+      0,
+      11,
+      0,
+      "IMAGE"
+    ],
+    [
+      12,
+      13,
+      0,
+      1,
+      1,
+      "POSE_KEYPOINT"
+    ],
+    [
+      19,
+      8,
+      0,
+      17,
+      0,
+      "IMAGE"
+    ],
+    [
+      20,
+      17,
+      0,
+      13,
+      0,
+      "IMAGE"
+    ],
+    [
+      21,
+      7,
+      1,
+      17,
+      1,
+      "INT"
+    ],
+    [
+      22,
+      7,
+      2,
+      17,
+      2,
+      "INT"
+    ],
+    [
+      23,
+      1,
+      0,
+      5,
+      0,
+      "POSE_KEYPOINT"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.8954302432553479,
+      "offset": [
+        226.3567882282611,
+        1133.1818671018987
+      ]
+    },
+    "frontendVersion": "1.25.8"
+  },
+  "version": 0.4
+}
