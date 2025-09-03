@@ -1,7 +1,7 @@
 [project]
 name = "ComfyUI-ProportionChanger"
 description = "Advanced DWPose-based body proportion manipulation and keypoint processing for ComfyUI"
-version = "1.0.0"
+version = "1.0.1"
 license = {file = "LICENSE"}
 dependencies = ["torch", "numpy", "opencv-python", "tqdm"]
 
