@@ -36,7 +36,7 @@ class ProportionChangerDWPoseRender:
             },
             "optional": {
                 "show_body": ("BOOLEAN", {"default": True, "tooltip": "Draw body keypoints"}),
-                "show_face": ("BOOLEAN", {"default": True, "tooltip": "Draw face keypoints"}),
+                "show_face": ("BOOLEAN", {"default": False, "tooltip": "Draw face keypoints"}),
                 "show_hands": ("BOOLEAN", {"default": True, "tooltip": "Draw hand keypoints"}),
                 "show_feet": ("BOOLEAN", {"default": True, "tooltip": "Draw toe keypoints (DWPose 25-point feature)"}),
                 "resolution_x": ("INT", {"default": -1, "min": -1, "max": 12800, "tooltip": "Output width (-1 for original)"}),
