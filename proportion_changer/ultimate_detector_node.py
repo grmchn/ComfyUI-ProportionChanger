@@ -8,8 +8,11 @@ import numpy as np
 # Import utilities from our utils package
 from ..utils import (
     pose_keypoint_to_dwpose_format,
-    dwpose_format_to_pose_keypoint
+    dwpose_format_to_pose_keypoint,
+    log,
 )
+
+from .converter_nodes import PoseKeypointResize
 
 
 class ProportionChangerReference:
@@ -17,6 +20,7 @@ class ProportionChangerReference:
     def INPUT_TYPES(s):
         return {"required": {
                 "pose_keypoint": ("POSE_KEYPOINT", {"tooltip": "Target pose keypoints"}),
+                "auto_resize_reference": ("BOOLEAN", {"default": True, "tooltip": "If true, auto-resize/pad reference_pose_keypoint to match pose_keypoint canvas size to avoid aspect mismatch issues."}),
             },
             "optional": {
                 "reference_pose_keypoint": ("POSE_KEYPOINT", {"tooltip": "Reference pose keypoint"}),
@@ -28,7 +32,7 @@ class ProportionChangerReference:
     FUNCTION = "process"
     CATEGORY = "ProportionChanger"
 
-    def process(self, pose_keypoint, reference_pose_keypoint=None):
+    def process(self, pose_keypoint, auto_resize_reference=True, reference_pose_keypoint=None):
         """
         Process POSE_KEYPOINT data using proportion changing algorithms
         Supports batch processing for multiple frames
@@ -53,6 +57,14 @@ class ProportionChangerReference:
         ref_data = None
         ref_canvas_width, ref_canvas_height = canvas_width, canvas_height
         if reference_pose_keypoint is not None:
+            if auto_resize_reference:
+                try:
+                    resizer = PoseKeypointResize()
+                    (reference_pose_keypoint,) = resizer.resize(reference_pose_keypoint, canvas_width, canvas_height)
+                except Exception as e:
+                    # Fallback to original reference data if resize fails
+                    log.warning(f"auto_resize_reference failed, using original reference_pose_keypoint: {e}")
+                    pass
             # Get reference canvas dimensions
             ref_frame_data = reference_pose_keypoint[0]
             ref_canvas_width = ref_frame_data.get('canvas_width', 512)

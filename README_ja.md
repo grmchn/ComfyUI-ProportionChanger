@@ -62,7 +62,7 @@ example_workflowsを参照してください。
 
 ### よくある問題
 1. **モデル読み込みエラー**: HuggingFaceから自動ダウンロードされるはずです。DWPoseモデルが正しいディレクトリにあることを確認してください。
-2. **リファレンス画像ありでプロポーション変換した後の体型がおかしい**: `pose_keypoint`と`reference_pose_keypoint`の縦横比（canvas幅/高さ）が一致していない可能性があります。リファレンス画像のサイズをポーズ画像側と同じにするか、**pose_keypoint resize**ノードで`pose_keypoint`側をリファレンスと同じ`width`/`height`に揃えてください。体の各パーツの微調整は「ProportionChanger Params」ノードで行ってください。
+2. **リファレンス画像ありでプロポーション変換した後の体型がおかしい**: `pose_keypoint`と`reference_pose_keypoint`の縦横比（canvas幅/高さ）が一致していない可能性があります。**ProportionChanger Reference**の`auto_resize_reference`（デフォルトON）でリファレンス側を自動で揃えます。必要に応じて**pose_keypoint resize**ノードで明示的に`width`/`height`を揃えてください。体の各パーツの微調整は「ProportionChanger Params」ノードで行ってください。
 3. **リファレンス画像ありでプロポーション変換した後に何も表示されない**:リファレンス画像のDWPoseによる姿勢推定が失敗しています。OpenposeEditorなどを利用してパラメータの数値を入力してください。
 
 ## 帰属とクレジット
