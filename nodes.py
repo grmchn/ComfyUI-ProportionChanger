@@ -13,6 +13,7 @@ from .proportion_changer import (
     ProportionChangerDWPoseRender,
     ProportionChangerParams,
     ProportionChangerInterpolator,
+    PoseDataToPoseKeypoint,
     # TODO: Re-enable after fixing Kalman filter issues
     # ProportionChangerKeypointDenoiser,
     # ProportionChangerKeypointDenoiserAdvanced
@@ -202,6 +203,7 @@ NODE_CLASS_MAPPINGS = {
     # "ProportionChangerKeypointDenoiserAdvanced": ProportionChangerKeypointDenoiserAdvanced,
     
     # Utility nodes
+    "PoseDataToPoseKeypoint": PoseDataToPoseKeypoint,
     "PoseJSONToPoseKeypoint": PoseJSONToPoseKeypoint,
     "PoseKeypointPreview": PoseKeypointPreview,
 }
@@ -219,6 +221,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     # "ProportionChangerKeypointDenoiserAdvanced": "ProportionChanger Denoiser (Advanced)",
     
     # Utility nodes
+    "PoseDataToPoseKeypoint": "PoseData to pose_keypoint",
     "PoseJSONToPoseKeypoint": "pose_keypoint input",
     "PoseKeypointPreview": "pose_keypoint preview",
 }

@@ -1,0 +1,725 @@
+{
+  "id": "deb90f3a-9e14-4806-8e90-98c0eea4d98e",
+  "revision": 0,
+  "last_node_id": 12,
+  "last_link_id": 18,
+  "nodes": [
+    {
+      "id": 7,
+      "type": "DrawViTPose",
+      "pos": [
+        7440.435138869547,
+        6129.696683823703
+      ],
+      "size": [
+        270,
+        178
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pose_data",
+          "type": "POSEDATA",
+          "link": 9
+        },
+        {
+          "name": "width",
+          "type": "INT",
+          "widget": {
+            "name": "width"
+          },
+          "link": 10
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "widget": {
+            "name": "height"
+          },
+          "link": 11
+        }
+      ],
+      "outputs": [
+        {
+          "name": "pose_images",
+          "type": "IMAGE",
+          "links": [
+            5
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUI-WanAnimatePreprocess",
+        "ver": "2fcbcae7eec637fdc712fdec18e6266feb8ba3a7",
+        "Node name for S&R": "DrawViTPose"
+      },
+      "widgets_values": [
+        480,
+        832,
+        16,
+        -1,
+        -1,
+        true
+      ]
+    },
+    {
+      "id": 9,
+      "type": "GetImageSizeAndCount",
+      "pos": [
+        6621.080613343585,
+        6467.158135374485
+      ],
+      "size": [
+        196.2994140625,
+        86
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 16
+        }
+      ],
+      "outputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "links": [
+            13
+          ]
+        },
+        {
+          "label": "512 width",
+          "name": "width",
+          "type": "INT",
+          "links": [
+            7,
+            10,
+            14
+          ]
+        },
+        {
+          "label": "920 height",
+          "name": "height",
+          "type": "INT",
+          "links": [
+            8,
+            11,
+            15
+          ]
+        },
+        {
+          "label": "16 count",
+          "name": "count",
+          "type": "INT",
+          "links": []
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-kjnodes",
+        "ver": "f37df472dfb325f1f72c90e2df56e72f40f850f0",
+        "Node name for S&R": "GetImageSizeAndCount"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 10,
+      "type": "VHS_LoadVideo",
+      "pos": [
+        6273.467729604059,
+        6468.808175961504
+      ],
+      "size": [
+        296.0120268545073,
+        819.5215916898854
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "meta_batch",
+          "shape": 7,
+          "type": "VHS_BatchManager",
+          "link": null
+        },
+        {
+          "name": "vae",
+          "shape": 7,
+          "type": "VAE",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            16
+          ]
+        },
+        {
+          "name": "frame_count",
+          "type": "INT",
+          "links": []
+        },
+        {
+          "name": "audio",
+          "type": "AUDIO",
+          "links": []
+        },
+        {
+          "name": "video_info",
+          "type": "VHS_VIDEOINFO",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-videohelpersuite",
+        "ver": "8550981384301e9bc5bfea83e5c2c75258102593",
+        "Node name for S&R": "VHS_LoadVideo"
+      },
+      "widgets_values": {
+        "video": "yoshi1_sample_girl.mp4",
+        "force_rate": 16,
+        "custom_width": 512,
+        "custom_height": 920,
+        "frame_load_cap": 16,
+        "skip_first_frames": 1,
+        "select_every_nth": 1,
+        "format": "AnimateDiff",
+        "videopreview": {
+          "hidden": false,
+          "paused": false,
+          "params": {
+            "filename": "yoshi1_sample_girl.mp4",
+            "type": "input",
+            "format": "video/mp4",
+            "force_rate": 16,
+            "custom_width": 512,
+            "custom_height": 920,
+            "frame_load_cap": 16,
+            "skip_first_frames": 1,
+            "select_every_nth": 1
+          }
+        }
+      }
+    },
+    {
+      "id": 11,
+      "type": "OnnxDetectionModelLoader",
+      "pos": [
+        6276.524633017252,
+        6134.099122226672
+      ],
+      "size": [
+        430.1680197224765,
+        106
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "POSEMODEL",
+          "links": [
+            12
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUI-WanAnimatePreprocess",
+        "ver": "2fcbcae7eec637fdc712fdec18e6266feb8ba3a7",
+        "Node name for S&R": "OnnxDetectionModelLoader"
+      },
+      "widgets_values": [
+        "onnx/vitpose_h_wholebody_model.onnx",
+        "onnx/yolov10m.onnx",
+        "CUDAExecutionProvider"
+      ]
+    },
+    {
+      "id": 8,
+      "type": "PoseAndFaceDetection",
+      "pos": [
+        6902.806960621858,
+        6134.325632658536
+      ],
+      "size": [
+        313.125,
+        162
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "POSEMODEL",
+          "link": 12
+        },
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 13
+        },
+        {
+          "name": "retarget_image",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": null
+        },
+        {
+          "name": "width",
+          "type": "INT",
+          "widget": {
+            "name": "width"
+          },
+          "link": 14
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "widget": {
+            "name": "height"
+          },
+          "link": 15
+        }
+      ],
+      "outputs": [
+        {
+          "name": "pose_data",
+          "type": "POSEDATA",
+          "links": [
+            6,
+            9
+          ]
+        },
+        {
+          "name": "face_images",
+          "type": "IMAGE",
+          "links": null
+        },
+        {
+          "name": "key_frame_body_points",
+          "type": "STRING",
+          "links": null
+        },
+        {
+          "name": "bboxes",
+          "type": "BBOX",
+          "links": null
+        },
+        {
+          "name": "face_bboxes",
+          "type": "BBOX,",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUI-WanAnimatePreprocess",
+        "ver": "2fcbcae7eec637fdc712fdec18e6266feb8ba3a7",
+        "Node name for S&R": "PoseAndFaceDetection"
+      },
+      "widgets_values": [
+        480,
+        832
+      ]
+    },
+    {
+      "id": 6,
+      "type": "PoseDataToPoseKeypoint",
+      "pos": [
+        6998.0968322251765,
+        6726.796517643764
+      ],
+      "size": [
+        280.7720703125,
+        82
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pose_data",
+          "type": "POSEDATA",
+          "link": 6
+        },
+        {
+          "name": "width",
+          "type": "INT",
+          "widget": {
+            "name": "width"
+          },
+          "link": 7
+        },
+        {
+          "name": "height",
+          "type": "INT",
+          "widget": {
+            "name": "height"
+          },
+          "link": 8
+        }
+      ],
+      "outputs": [
+        {
+          "name": "pose_keypoint",
+          "type": "POSE_KEYPOINT",
+          "links": [
+            3
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUI-ProportionChanger",
+        "ver": "16cda84ffa029ac60fc2da05f727fafcdf90fcd6",
+        "Node name for S&R": "PoseDataToPoseKeypoint"
+      },
+      "widgets_values": [
+        512,
+        768
+      ]
+    },
+    {
+      "id": 5,
+      "type": "VHS_VideoCombine",
+      "pos": [
+        7773.121842444329,
+        6122.950426243646
+      ],
+      "size": [
+        270.25917466462124,
+        797.6844544754913
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 5
+        },
+        {
+          "name": "audio",
+          "shape": 7,
+          "type": "AUDIO",
+          "link": null
+        },
+        {
+          "name": "meta_batch",
+          "shape": 7,
+          "type": "VHS_BatchManager",
+          "link": null
+        },
+        {
+          "name": "vae",
+          "shape": 7,
+          "type": "VAE",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "Filenames",
+          "type": "VHS_FILENAMES",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-videohelpersuite",
+        "ver": "0a75c7958fe320efcb052f1d9f8451fd20c730a8",
+        "Node name for S&R": "VHS_VideoCombine"
+      },
+      "widgets_values": {
+        "frame_rate": 16,
+        "loop_count": 0,
+        "filename_prefix": "ProportionChanger_Dev",
+        "format": "video/h264-mp4",
+        "pix_fmt": "yuv420p",
+        "crf": 19,
+        "save_metadata": true,
+        "trim_to_audio": false,
+        "pingpong": false,
+        "save_output": true,
+        "videopreview": {
+          "hidden": false,
+          "paused": false,
+          "params": {
+            "filename": "ProportionChanger_Dev_00011.mp4",
+            "subfolder": "",
+            "type": "output",
+            "format": "video/h264-mp4",
+            "frame_rate": 16,
+            "workflow": "ProportionChanger_Dev_00011.png",
+            "fullpath": "/home/shins/works/ComfyUI/output/ProportionChanger_Dev_00011.mp4"
+          }
+        }
+      }
+    },
+    {
+      "id": 1,
+      "type": "VHS_VideoCombine",
+      "pos": [
+        7776.91575807864,
+        6987.710777633694
+      ],
+      "size": [
+        270.25917466462124,
+        797.6844544754913
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 18
+        },
+        {
+          "name": "audio",
+          "shape": 7,
+          "type": "AUDIO",
+          "link": null
+        },
+        {
+          "name": "meta_batch",
+          "shape": 7,
+          "type": "VHS_BatchManager",
+          "link": null
+        },
+        {
+          "name": "vae",
+          "shape": 7,
+          "type": "VAE",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "Filenames",
+          "type": "VHS_FILENAMES",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfyui-videohelpersuite",
+        "ver": "0a75c7958fe320efcb052f1d9f8451fd20c730a8",
+        "Node name for S&R": "VHS_VideoCombine"
+      },
+      "widgets_values": {
+        "frame_rate": 16,
+        "loop_count": 0,
+        "filename_prefix": "ProportionChanger",
+        "format": "video/h264-mp4",
+        "pix_fmt": "yuv420p",
+        "crf": 19,
+        "save_metadata": true,
+        "trim_to_audio": false,
+        "pingpong": false,
+        "save_output": true,
+        "videopreview": {
+          "hidden": false,
+          "paused": false,
+          "params": {
+            "filename": "ProportionChanger_00001.mp4",
+            "subfolder": "",
+            "type": "output",
+            "format": "video/h264-mp4",
+            "frame_rate": 16,
+            "workflow": "ProportionChanger_00001.png",
+            "fullpath": "/home/shins/works/ComfyUI/output/ProportionChanger_00001.mp4"
+          }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "ProportionChangerDWPoseRender",
+      "pos": [
+        7349.095248798733,
+        6869.300113529442
+      ],
+      "size": [
+        337.8521484375,
+        226
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pose_keypoint",
+          "type": "POSE_KEYPOINT",
+          "link": 3
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            18
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUI-ProportionChanger",
+        "ver": "16cda84ffa029ac60fc2da05f727fafcdf90fcd6",
+        "Node name for S&R": "ProportionChangerDWPoseRender"
+      },
+      "widgets_values": [
+        true,
+        false,
+        true,
+        true,
+        -1,
+        4,
+        3,
+        2
+      ]
+    }
+  ],
+  "links": [
+    [
+      3,
+      6,
+      0,
+      3,
+      0,
+      "POSE_KEYPOINT"
+    ],
+    [
+      5,
+      7,
+      0,
+      5,
+      0,
+      "IMAGE"
+    ],
+    [
+      6,
+      8,
+      0,
+      6,
+      0,
+      "POSEDATA"
+    ],
+    [
+      7,
+      9,
+      1,
+      6,
+      1,
+      "INT"
+    ],
+    [
+      8,
+      9,
+      2,
+      6,
+      2,
+      "INT"
+    ],
+    [
+      9,
+      8,
+      0,
+      7,
+      0,
+      "POSEDATA"
+    ],
+    [
+      10,
+      9,
+      1,
+      7,
+      1,
+      "INT"
+    ],
+    [
+      11,
+      9,
+      2,
+      7,
+      2,
+      "INT"
+    ],
+    [
+      12,
+      11,
+      0,
+      8,
+      0,
+      "POSEMODEL"
+    ],
+    [
+      13,
+      9,
+      0,
+      8,
+      1,
+      "IMAGE"
+    ],
+    [
+      14,
+      9,
+      1,
+      8,
+      3,
+      "INT"
+    ],
+    [
+      15,
+      9,
+      2,
+      8,
+      4,
+      "INT"
+    ],
+    [
+      16,
+      10,
+      0,
+      9,
+      0,
+      "IMAGE"
+    ],
+    [
+      18,
+      3,
+      0,
+      1,
+      0,
+      "IMAGE"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.5559917313492256,
+      "offset": [
+        -6097.1435759818805,
+        -6089.885949666708
+      ]
+    },
+    "workflowRendererVersion": "LG",
+    "frontendVersion": "1.35.4",
+    "VHS_latentpreview": false,
+    "VHS_latentpreviewrate": 0,
+    "VHS_MetadataImage": true,
+    "VHS_KeepIntermediate": true
+  },
+  "version": 0.4
+}

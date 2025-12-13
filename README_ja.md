@@ -16,6 +16,7 @@
 - **ProportionChanger DWPose Render**: KeyPointを画像に変換する
 - **ProportionChanger Params**: KeyPointの各パーツのパラメータを調整する
 - **ProportionChanger Interpolator**: KeyPoint動画を中割りして補間する
+- **PoseData to pose_keypoint**: WanAnimateの`POSEDATA`を`POSE_KEYPOINT`に変換する
 - **pose_keypoint input**: JSONテキストからKeyPointに変換する
 - **pose_keypoint preview**: KeyPointからJSONに変換する
 
@@ -48,6 +49,12 @@ pip install -r requirements.txt
 example_workflowsを参照してください。
 
 ![proportion_changer_basic2](docs/images/example_basic2.png)
+
+### WanAnimate POSEDATAの変換
+- WanAnimatePreprocessの「Pose and Face Detection」で`POSEDATA`を取得
+- **PoseData to pose_keypoint**ノードに`POSEDATA`とキャンバスの`width`/`height`を入力
+- 出力された`pose_keypoint`をProportionChanger Reference / Renderノードに接続
+- サンプルワークフロー: `example_workflows/proportion_changer_pose_data_to_pose_keypoint.json`
 
 
 ## トラブルシューティング

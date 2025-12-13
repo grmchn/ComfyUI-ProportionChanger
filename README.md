@@ -16,6 +16,7 @@ Additionally, the Openpose Editor node from [toyxyz/ComfyUI-ultimate-openpose-ed
 - **ProportionChanger DWPose Render**: Converts KeyPoints to images
 - **ProportionChanger Params**: Adjusts parameters for individual KeyPoint parts
 - **ProportionChanger Interpolator**: Interpolates KeyPoint videos with in-betweening
+- **PoseData to pose_keypoint**: Converts WanAnimate `POSEDATA` into `POSE_KEYPOINT`
 - **pose_keypoint input**: Converts JSON text to KeyPoints
 - **pose_keypoint preview**: Converts KeyPoints to JSON
 
@@ -48,6 +49,12 @@ pip install -r requirements.txt
 Please refer to example_workflows.
 
 ![proportion_changer_basic2](docs/images/example_basic2.png)
+
+### Converting WanAnimate POSEDATA
+- Use WanAnimatePreprocess "Pose and Face Detection" to produce `POSEDATA`
+- Feed `POSEDATA`, `width`, and `height` into **PoseData to pose_keypoint**
+- Connect the resulting `pose_keypoint` to ProportionChanger Reference / Render nodes
+- Example workflow: `example_workflows/proportion_changer_pose_data_to_pose_keypoint.json`
 
 ## Troubleshooting
 

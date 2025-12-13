@@ -28,6 +28,11 @@ from .interpolation_node import (
     ProportionChangerInterpolator
 )
 
+# Converter nodes
+from .converter_nodes import (
+    PoseDataToPoseKeypoint
+)
+
 # Import keypoint denoiser node classes
 from .keypoint_denoiser_node import (
     ProportionChangerKeypointDenoiser,
@@ -49,6 +54,9 @@ __all__ = [
     
     # Interpolation nodes
     "ProportionChangerInterpolator",
+
+    # Converter nodes
+    "PoseDataToPoseKeypoint",
     
     # KeyPoint Denoiser nodes
     "ProportionChangerKeypointDenoiser",

@@ -308,7 +308,7 @@ class ProportionChangerParams:
         if not all([orig_r_hip, orig_l_hip, orig_neck, orig_nose]):
             return adjusted  # Return unchanged if essential keypoints are missing
         
-        # 階層構造で変換を適用：hip_center → neck → shoulders → arms, legs
+        # 階層構造で変換を適用：hip_center -> neck -> shoulders -> arms, legs
         # 全て元の座標を基準に計算し、依存関係を考慮
         
         # 1. 骨盤の調整（元の座標基準）
