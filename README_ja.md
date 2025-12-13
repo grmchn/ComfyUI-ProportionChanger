@@ -17,6 +17,7 @@
 - **ProportionChanger Params**: KeyPointの各パーツのパラメータを調整する
 - **ProportionChanger Interpolator**: KeyPoint動画を中割りして補間する
 - **PoseData to pose_keypoint**: WanAnimateの`POSEDATA`を`POSE_KEYPOINT`に変換する
+- **pose_keypoint resize**: `POSE_KEYPOINT`を指定サイズにリサイズ（アスペクト比が違う場合はパディング→スケールで歪みを防ぐ）
 - **pose_keypoint input**: JSONテキストからKeyPointに変換する
 - **pose_keypoint preview**: KeyPointからJSONに変換する
 
@@ -61,7 +62,7 @@ example_workflowsを参照してください。
 
 ### よくある問題
 1. **モデル読み込みエラー**: HuggingFaceから自動ダウンロードされるはずです。DWPoseモデルが正しいディレクトリにあることを確認してください。
-2. **リファレンス画像ありでプロポーション変換した後の体型がおかしい**:リファレンス画像のサイズをポーズ画像側と同じにしてください。体の各パーツの微調整は、「ProportionChanger Params」ノードで行ってください。
+2. **リファレンス画像ありでプロポーション変換した後の体型がおかしい**: `pose_keypoint`と`reference_pose_keypoint`の縦横比（canvas幅/高さ）が一致していない可能性があります。リファレンス画像のサイズをポーズ画像側と同じにするか、**pose_keypoint resize**ノードで`pose_keypoint`側をリファレンスと同じ`width`/`height`に揃えてください。体の各パーツの微調整は「ProportionChanger Params」ノードで行ってください。
 3. **リファレンス画像ありでプロポーション変換した後に何も表示されない**:リファレンス画像のDWPoseによる姿勢推定が失敗しています。OpenposeEditorなどを利用してパラメータの数値を入力してください。
 
 ## 帰属とクレジット

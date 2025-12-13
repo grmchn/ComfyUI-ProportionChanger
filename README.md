@@ -17,6 +17,7 @@ Additionally, the Openpose Editor node from [toyxyz/ComfyUI-ultimate-openpose-ed
 - **ProportionChanger Params**: Adjusts parameters for individual KeyPoint parts
 - **ProportionChanger Interpolator**: Interpolates KeyPoint videos with in-betweening
 - **PoseData to pose_keypoint**: Converts WanAnimate `POSEDATA` into `POSE_KEYPOINT`
+- **pose_keypoint resize**: Resizes `POSE_KEYPOINT` to a target size (pads then scales to avoid stretching when aspect differs)
 - **pose_keypoint input**: Converts JSON text to KeyPoints
 - **pose_keypoint preview**: Converts KeyPoints to JSON
 
@@ -60,7 +61,7 @@ Please refer to example_workflows.
 
 ### Common Issues
 1. **Model Loading Errors**: Models should be automatically downloaded from HuggingFace. Please ensure DWPose models are in the correct directory.
-2. **Incorrect body proportions after transformation with reference image**: Make sure the reference image size matches the pose image size. Fine-tune individual body parts using the "ProportionChanger Params" node.
+2. **Incorrect body proportions after transformation with reference image**: The `pose_keypoint` and `reference_pose_keypoint` aspect ratios (canvas width/height) may not match. Make the reference image size match the pose image size, or use **pose_keypoint resize** to align `pose_keypoint` to the same `width`/`height`. Fine-tune individual body parts using the "ProportionChanger Params" node.
 3. **Nothing displays after transformation with reference image**: The reference image's pose estimation by DWPose has failed. Use OpenposeEditor or similar tools to input parameter values manually.
 
 ## Attribution and Credits

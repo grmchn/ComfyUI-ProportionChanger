@@ -14,6 +14,7 @@ from .proportion_changer import (
     ProportionChangerParams,
     ProportionChangerInterpolator,
     PoseDataToPoseKeypoint,
+    PoseKeypointResize,
     # TODO: Re-enable after fixing Kalman filter issues
     # ProportionChangerKeypointDenoiser,
     # ProportionChangerKeypointDenoiserAdvanced
@@ -204,6 +205,7 @@ NODE_CLASS_MAPPINGS = {
     
     # Utility nodes
     "PoseDataToPoseKeypoint": PoseDataToPoseKeypoint,
+    "PoseKeypointResize": PoseKeypointResize,
     "PoseJSONToPoseKeypoint": PoseJSONToPoseKeypoint,
     "PoseKeypointPreview": PoseKeypointPreview,
 }
@@ -222,6 +224,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     
     # Utility nodes
     "PoseDataToPoseKeypoint": "PoseData to pose_keypoint",
+    "PoseKeypointResize": "pose_keypoint resize",
     "PoseJSONToPoseKeypoint": "pose_keypoint input",
     "PoseKeypointPreview": "pose_keypoint preview",
 }
