@@ -7,6 +7,8 @@ opencv-python
 
 # Progress bars and utilities  
 tqdm
+huggingface_hub
 
-# Optional: ONNX Runtime (for ONNX-based pose detection - currently not used in active nodes)
-# onnxruntime
+# ONNX Runtime for Mascot OpenPose nodes. Install onnxruntime-gpu instead if
+# your ComfyUI environment manages CUDA providers separately.
+onnxruntime

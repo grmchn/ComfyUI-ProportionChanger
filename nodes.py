@@ -5,6 +5,16 @@ Backward compatibility maintained for existing workflows
 
 from .utils import log
 import json
+import os
+
+try:
+    import folder_paths
+    folder_paths.add_model_folder_path(
+        "mascot_body_detect",
+        os.path.join(folder_paths.models_dir, "mascot_body_detect"),
+    )
+except ImportError:
+    folder_paths = None
 
 # Import all nodes from our organized structure
 from .proportion_changer import (
@@ -15,6 +25,11 @@ from .proportion_changer import (
     ProportionChangerInterpolator,
     PoseDataToPoseKeypoint,
     PoseKeypointResize,
+    DownloadAndLoadMascotDWPoseModel,
+    DownloadAndLoadMascotBBoxModel,
+    MascotDWPoseDetector,
+    MascotBBoxDetector,
+    ConvertToSCAILPose,
     # TODO: Re-enable after fixing Kalman filter issues
     # ProportionChangerKeypointDenoiser,
     # ProportionChangerKeypointDenoiserAdvanced
@@ -208,6 +223,13 @@ NODE_CLASS_MAPPINGS = {
     "PoseKeypointResize": PoseKeypointResize,
     "PoseJSONToPoseKeypoint": PoseJSONToPoseKeypoint,
     "PoseKeypointPreview": PoseKeypointPreview,
+
+    # Mascot OpenPose nodes
+    "DownloadAndLoadMascotDWPoseModel": DownloadAndLoadMascotDWPoseModel,
+    "DownloadAndLoadMascotBBoxModel": DownloadAndLoadMascotBBoxModel,
+    "MascotDWPoseDetector": MascotDWPoseDetector,
+    "MascotBBoxDetector": MascotBBoxDetector,
+    "ConvertToSCAILPose": ConvertToSCAILPose,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -227,4 +249,11 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "PoseKeypointResize": "pose_keypoint resize",
     "PoseJSONToPoseKeypoint": "pose_keypoint input",
     "PoseKeypointPreview": "pose_keypoint preview",
+
+    # Mascot OpenPose nodes
+    "DownloadAndLoadMascotDWPoseModel": "(Down)Load Mascot DWPose Model",
+    "DownloadAndLoadMascotBBoxModel": "(Down)Load Mascot BBox Model",
+    "MascotDWPoseDetector": "Mascot DWPose Detector",
+    "MascotBBoxDetector": "Mascot BBox Detector",
+    "ConvertToSCAILPose": "pose_keypoint to dw_poses",
 }

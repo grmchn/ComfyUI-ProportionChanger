@@ -20,6 +20,11 @@
 - **pose_keypoint resize**: `POSE_KEYPOINT`を指定サイズにリサイズ（アスペクト比が違う場合はパディング→スケールで歪みを防ぐ）
 - **pose_keypoint input**: JSONテキストからKeyPointに変換する
 - **pose_keypoint preview**: KeyPointからJSONに変換する
+- **(Down)Load Mascot DWPose Model**: HuggingFaceからマスコット用DWPose ONNXモデルをダウンロードして読み込む
+- **(Down)Load Mascot BBox Model**: HuggingFaceからマスコット用bbox ONNXモデルをダウンロードして読み込む
+- **Mascot DWPose Detector**: マスコットの姿勢を`POSE_KEYPOINT`として検出する
+- **Mascot BBox Detector**: マスコットのパーツbboxを`BOUNDING_BOX`として検出する
+- **pose_keypoint to dw_poses**: 25点`POSE_KEYPOINT`をSCAIL-Pose用`DWPOSES`に変換する
 
 ## インストール
 ### ComfyUI Managerでインストール
@@ -64,6 +69,10 @@ example_workflowsを参照してください。
 1. **モデル読み込みエラー**: HuggingFaceから自動ダウンロードされるはずです。DWPoseモデルが正しいディレクトリにあることを確認してください。
 2. **リファレンス画像ありでプロポーション変換した後の体型がおかしい**: `pose_keypoint`と`reference_pose_keypoint`の縦横比（canvas幅/高さ）が一致していない可能性があります。**ProportionChanger Reference**の`auto_resize_reference`（デフォルトON）でリファレンス側を自動で揃えます。必要に応じて**pose_keypoint resize**ノードで明示的に`width`/`height`を揃えてください。体の各パーツの微調整は「ProportionChanger Params」ノードで行ってください。
 3. **リファレンス画像ありでプロポーション変換した後に何も表示されない**:リファレンス画像のDWPoseによる姿勢推定が失敗しています。OpenposeEditorなどを利用してパラメータの数値を入力してください。
+
+### Mascot OpenPoseモデル
+
+Mascot OpenPoseノードは、HuggingFaceの`grmchn/mascot-openpose-detect-test`から`ComfyUI/models/mascot_body_detect`へモデルをダウンロードします。現在のtestモデルパッケージは、非商用のpretrained backboneに由来するViTPose-L variantを含むため、CC-BY-NC 4.0です。ノードコードはこのリポジトリの一部ですが、ダウンロードされたtestモデルの利用はモデル側のライセンスに従います。
 
 ## 帰属とクレジット
 ### Special Thanks

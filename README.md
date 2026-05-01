@@ -20,6 +20,11 @@ Additionally, the Openpose Editor node from [toyxyz/ComfyUI-ultimate-openpose-ed
 - **pose_keypoint resize**: Resizes `POSE_KEYPOINT` to a target size (pads then scales to avoid stretching when aspect differs)
 - **pose_keypoint input**: Converts JSON text to KeyPoints
 - **pose_keypoint preview**: Converts KeyPoints to JSON
+- **(Down)Load Mascot DWPose Model**: Downloads and loads a mascot DWPose ONNX model from HuggingFace
+- **(Down)Load Mascot BBox Model**: Downloads and loads a mascot bbox ONNX model from HuggingFace
+- **Mascot DWPose Detector**: Detects mascot body pose as `POSE_KEYPOINT`
+- **Mascot BBox Detector**: Detects mascot part bounding boxes as `BOUNDING_BOX`
+- **pose_keypoint to dw_poses**: Converts 25-point `POSE_KEYPOINT` to SCAIL-Pose `DWPOSES`
 
 ## Installation
 ### Install via ComfyUI Manager
@@ -63,6 +68,10 @@ Please refer to example_workflows.
 1. **Model Loading Errors**: Models should be automatically downloaded from HuggingFace. Please ensure DWPose models are in the correct directory.
 2. **Incorrect body proportions after transformation with reference image**: The `pose_keypoint` and `reference_pose_keypoint` aspect ratios (canvas width/height) may not match. **ProportionChanger Reference** has `auto_resize_reference` (default ON) to automatically align the reference to the pose canvas size. If needed, use **pose_keypoint resize** to explicitly align `width`/`height`. Fine-tune individual body parts using the "ProportionChanger Params" node.
 3. **Nothing displays after transformation with reference image**: The reference image's pose estimation by DWPose has failed. Use OpenposeEditor or similar tools to input parameter values manually.
+
+### Mascot OpenPose Models
+
+Mascot OpenPose nodes download model artifacts from `grmchn/mascot-openpose-detect-test` on HuggingFace into `ComfyUI/models/mascot_body_detect`. The current test model package is CC-BY-NC 4.0 because it includes the ViTPose-L variant derived from a non-commercial pretrained backbone. The node code remains part of this repository, but use of the downloaded test models is subject to that model license.
 
 ## Attribution and Credits
 ### Special Thanks
