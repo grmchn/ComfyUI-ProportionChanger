@@ -1,6 +1,6 @@
 """
 ProportionChanger render node classes
-Contains nodes for rendering POSE_KEYPOINT data using DWPose styling
+Contains nodes for rendering POSE_KEYPOINT data
 """
 
 import numpy as np
@@ -23,8 +23,8 @@ def debug_log(message):
 
 class ProportionChangerDWPoseRender:
     """
-    DWPose Render Node with 25-point keypoint support including toe keypoints.
-    Compatible with ultimate-openpose-render parameters but using DWPose rendering algorithms.
+    Pose render node with 25-point keypoint support including toe keypoints.
+    Compatible with ultimate-openpose-render parameters.
     Resolves coordinate misalignment issues when displaying ProportionChanger outputs.
     """
     
@@ -38,7 +38,7 @@ class ProportionChangerDWPoseRender:
                 "show_body": ("BOOLEAN", {"default": True, "tooltip": "Draw body keypoints"}),
                 "show_face": ("BOOLEAN", {"default": False, "tooltip": "Draw face keypoints"}),
                 "show_hands": ("BOOLEAN", {"default": True, "tooltip": "Draw hand keypoints"}),
-                "show_feet": ("BOOLEAN", {"default": True, "tooltip": "Draw toe keypoints (DWPose 25-point feature)"}),
+                "show_feet": ("BOOLEAN", {"default": True, "tooltip": "Draw toe keypoints"}),
                 "resolution_x": ("INT", {"default": -1, "min": -1, "max": 12800, "tooltip": "Output width (-1 for original)"}),
                 "pose_marker_size": ("INT", {"default": 4, "min": 0, "max": 100, "tooltip": "Body keypoint marker size"}),
                 "face_marker_size": ("INT", {"default": 3, "min": 0, "max": 100, "tooltip": "Face keypoint marker size"}),
@@ -78,7 +78,7 @@ class ProportionChangerDWPoseRender:
         elif isinstance(pose_keypoint, dict):
             debug_log(f"Debug single frame keys: {pose_keypoint.keys()}")
         
-        # Render using DWPose algorithms
+        # Render using the local pose renderer.
         pose_imgs = draw_dwpose_render(
             pose_keypoint, resolution_x, show_body, show_face, show_hands, show_feet,
             pose_marker_size, face_marker_size, hand_marker_size

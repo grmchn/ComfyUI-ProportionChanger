@@ -1,6 +1,6 @@
 """
 ProportionChanger nodes package
-Provides organized node classes for DWPose detection and rendering
+Provides organized node classes for pose detection and rendering
 """
 
 # Import detector node classes

@@ -272,7 +272,7 @@ class ProportionChangerParams:
         original = keypoints.copy()
         adjusted = keypoints.copy()
         
-        # DWPose keypoint definitions (corrected based on actual data structure)
+        # Pose keypoint definitions (corrected based on actual data structure)
         KP = {
             "Nose": 0, "Neck": 1, "RShoulder": 2, "RElbow": 3, "RWrist": 4,
             "LShoulder": 5, "LElbow": 6, "LWrist": 7, "LHip": 8, "LKnee": 9,

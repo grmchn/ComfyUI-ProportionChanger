@@ -1410,8 +1410,8 @@ def draw_hands_dwpose_render(canvas, person, orig_w, orig_h, scaled_w, scaled_h,
 
 class ProportionChangerDWPoseRender:
     """
-    DWPose Render Node with 25-point keypoint support including toe keypoints.
-    Compatible with ultimate-openpose-render parameters but using DWPose rendering algorithms.
+    Pose render node with 25-point keypoint support including toe keypoints.
+    Compatible with ultimate-openpose-render parameters.
     Resolves coordinate misalignment issues when displaying ProportionChanger outputs.
     """
     
@@ -1460,11 +1460,7 @@ class ProportionChangerDWPoseRender:
 
 NODE_CLASS_MAPPINGS = {
     "ProportionChangerDWPoseRender": ProportionChangerDWPoseRender,
-    
-    }
+}
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "ProportionChangerDWPoseRender": "ProportionChanger DWPose Render",
-    
-    }
-
-    
+    "ProportionChangerDWPoseRender": "ProportionChanger Pose Render",
+}

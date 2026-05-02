@@ -72,7 +72,7 @@ class ProportionChangerReference:
             # Convert reference using its own canvas dimensions
             ref_data = pose_keypoint_to_dwpose_format(reference_pose_keypoint, ref_canvas_width, ref_canvas_height)
         
-        # Convert all frames to DWPose format for batch processing
+        # Convert all frames to the internal pose format for batch processing
         batch_pose_data = []
         for frame in pose_keypoint:
             single_frame_data = [frame]
@@ -803,10 +803,10 @@ class ProportionChangerReference:
     def apply_proportion_changes(self, pose_data, ref_data, 
                                 canvas_width, canvas_height, ref_canvas_width, ref_canvas_height):
         """
-        Apply proportion changing algorithms from the original DWPose detector
+        Apply proportion changing algorithms from the original pose detector
         Complete 1:1 port from pose_extract function (lines 241-500+) in WanVideoWrapper
         
-        DWPose Body Keypoint Structure:
+        Body Keypoint Structure:
         0: Nose, 1: Left Eye, 2: Right Eye, 3: Left Ear, 4: Right Ear,
         5: Left Shoulder, 6: Right Shoulder, 7: Left Elbow, 8: Right Elbow,
         9: Left Wrist, 10: Right Wrist, 11: Left Hip, 12: Right Hip,

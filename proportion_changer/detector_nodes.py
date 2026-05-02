@@ -1,6 +1,6 @@
 """
 ProportionChanger detector node classes
-Contains the main DWPose detector nodes for pose estimation
+Contains the main pose detector nodes for pose estimation
 """
 
 import os
@@ -19,7 +19,7 @@ from ..utils import log
 
 class ProportionChangerDWPoseDetector:
     """
-    DWPose detector node that extracts pose keypoints from image and outputs POSE_KEYPOINT format.
+    Pose detector node that extracts pose keypoints from image and outputs POSE_KEYPOINT format.
     This node is designed to work with ProportionChangerReference.
     Includes toe keypoints (19-24) which are essential for full pose estimation.
     """
@@ -82,7 +82,7 @@ class ProportionChangerDWPoseDetector:
         
         for i, img in enumerate(image_np):
             try:
-                # Use the high-level DWPose detector call (same as working UniAnimate version)
+                # Use the high-level pose detector call (same as working UniAnimate version)
                 pose = self.dwpose_detector(img, score_threshold=score_threshold)
                 
                 # Convert to POSE_KEYPOINT format using actual canvas dimensions

@@ -1,5 +1,5 @@
 """
-Mascot OpenPose nodes for ProportionChanger.
+Mascot pose nodes for ProportionChanger.
 
 The model artifacts are downloaded from HuggingFace and executed with
 ONNXRuntime. This module intentionally has no runtime dependency on the
@@ -33,18 +33,16 @@ except ImportError:  # pragma: no cover
     log = logging.getLogger(__name__)
 
 
-DEFAULT_REPO_ID = "grmchn/mascot-openpose-detect-test"
+DEFAULT_REPO_ID = "grmchn/mascot-pose-detect"
 HF_BASE_URL = f"https://huggingface.co/{DEFAULT_REPO_ID}/resolve/main"
 MASCOT_BBOX_MODEL_URLS = [
     f"{HF_BASE_URL}/bbox/model.onnx",
 ]
 MASCOT_DWPOSE_MODEL_URLS = [
-    f"{HF_BASE_URL}/keypoint/vitpose_l/model.onnx",
-    f"{HF_BASE_URL}/keypoint/rtmpose_s/model.onnx",
+    f"{HF_BASE_URL}/keypoint/dinov2_vitpose_l/model.onnx",
 ]
 POSE_URL_TO_VARIANT = {
-    f"{HF_BASE_URL}/keypoint/vitpose_l/model.onnx": "vitpose_l",
-    f"{HF_BASE_URL}/keypoint/rtmpose_s/model.onnx": "rtmpose_s",
+    f"{HF_BASE_URL}/keypoint/dinov2_vitpose_l/model.onnx": "dinov2_vitpose_l",
 }
 BBOX_KEYS = (
     "full",
@@ -101,11 +99,28 @@ def _read_json(path: str) -> Any:
         return json.load(handle)
 
 
+def _repo_marker_path(base: str) -> str:
+    return os.path.join(base, ".repo_id")
+
+
+def _local_repo_matches(base: str) -> bool:
+    try:
+        with open(_repo_marker_path(base), "r", encoding="utf-8") as handle:
+            return handle.read().strip() == DEFAULT_REPO_ID
+    except FileNotFoundError:
+        return False
+
+
+def _write_repo_marker(base: str) -> None:
+    with open(_repo_marker_path(base), "w", encoding="utf-8") as handle:
+        handle.write(DEFAULT_REPO_ID)
+
+
 def _download_artifacts(url: str, *, include_bbox: bool, keypoint_variant: str | None = None) -> str:
     if include_bbox and url not in MASCOT_BBOX_MODEL_URLS and keypoint_variant is None:
         raise ValueError(f"URL {url} is not in the list of allowed Mascot BBox models.")
     if keypoint_variant is not None and url not in MASCOT_DWPOSE_MODEL_URLS:
-        raise ValueError(f"URL {url} is not in the list of allowed Mascot DWPose models.")
+        raise ValueError(f"URL {url} is not in the list of allowed Mascot Pose models.")
 
     from huggingface_hub import snapshot_download
 
@@ -131,13 +146,14 @@ def _download_artifacts(url: str, *, include_bbox: bool, keypoint_variant: str |
             ]
         )
 
-    if not all(os.path.exists(path) for path in required_paths):
+    if not _local_repo_matches(base) or not all(os.path.exists(path) for path in required_paths):
         snapshot_download(
             repo_id=DEFAULT_REPO_ID,
             repo_type="model",
             allow_patterns=allow_patterns,
             local_dir=base,
         )
+        _write_repo_marker(base)
     return base
 
 
@@ -538,7 +554,7 @@ def infer_keypoints_pixel(
     if outputs is None or matrix is None:
         return [[0.0, 0.0, 0.0] for _ in range(25)]
 
-    if variant == "vitpose_l":
+    if variant in {"vitpose_l", "dinov2_vitpose_l"}:
         scale = float(kp_meta.get("heatmap_to_input_scale", 4.0))
         kp_crop = decode_heatmap(outputs[0][0], scale)
         kp_image_17 = crop_to_image_points(kp_crop, matrix)
@@ -686,7 +702,7 @@ class DownloadAndLoadMascotDWPoseModel:
             "required": {
                 "url": (
                     MASCOT_DWPOSE_MODEL_URLS,
-                    {"default": f"{HF_BASE_URL}/keypoint/vitpose_l/model.onnx"},
+                    {"default": f"{HF_BASE_URL}/keypoint/dinov2_vitpose_l/model.onnx"},
                 ),
                 "cuda": (
                     "BOOLEAN",
@@ -705,7 +721,7 @@ class DownloadAndLoadMascotDWPoseModel:
     RETURN_NAMES = ("mascot_pose_model",)
     FUNCTION = "loadmodel"
     CATEGORY = "ProportionChanger"
-    DESCRIPTION = "Download and load a mascot DWPose ONNX model from HuggingFace."
+    DESCRIPTION = "Download and load a mascot pose ONNX model from HuggingFace."
 
     def loadmodel(self, url: str, cuda: bool, warmup: bool = True):
         if folder_paths is None:
@@ -715,10 +731,10 @@ class DownloadAndLoadMascotDWPoseModel:
 
         keypoint_variant = POSE_URL_TO_VARIANT.get(url)
         if keypoint_variant is None:
-            raise ValueError(f"URL {url} is not in the list of allowed Mascot DWPose models.")
+            raise ValueError(f"URL {url} is not in the list of allowed Mascot Pose models.")
 
-        # The current top-down DWPose ONNX still needs a body ROI. Keep the bbox
-        # sidecar inside this handle so the DWPose detector remains a single-input
+        # The current top-down keypoint ONNX still needs a body ROI. Keep the bbox
+        # sidecar inside this handle so the pose detector remains a single-input
         # node while exposing a separate bbox loader for bbox-only workflows.
         base = _download_artifacts(url, include_bbox=True, keypoint_variant=keypoint_variant)
         bbox_onnx = os.path.join(base, "bbox", "model.onnx")
@@ -728,14 +744,14 @@ class DownloadAndLoadMascotDWPoseModel:
         kp_session = ort.InferenceSession(kp_onnx, providers=providers)
 
         if warmup:
-            log.info("Warming up Mascot DWPose model...")
+            log.info("Warming up Mascot Pose model...")
             bbox_input = bbox_session.get_inputs()[0]
             kp_input = kp_session.get_inputs()[0]
             bbox_shape = [1 if not isinstance(dim, int) else dim for dim in bbox_input.shape]
             kp_shape = [1 if not isinstance(dim, int) else dim for dim in kp_input.shape]
             bbox_session.run(None, {bbox_input.name: np.zeros(bbox_shape, dtype=np.float32)})
             kp_session.run(None, {kp_input.name: np.zeros(kp_shape, dtype=np.float32)})
-            log.info("Mascot DWPose model warmed up")
+            log.info("Mascot Pose model warmed up")
 
         return (
             {
@@ -812,7 +828,7 @@ class MascotDWPoseDetector:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "mascot_pose_model": ("MASCOT_POSE_MODEL", {"tooltip": "Output of (Down)Load Mascot DWPose Model"}),
+                "mascot_pose_model": ("MASCOT_POSE_MODEL", {"tooltip": "Output of (Down)Load Mascot Pose Model"}),
                 "image": ("IMAGE", {"tooltip": "Input image, RGB float [0,1]."}),
                 "width": ("INT", {"default": 1024, "min": 64, "max": 8192, "step": 8}),
                 "height": ("INT", {"default": 1024, "min": 64, "max": 8192, "step": 8}),
@@ -925,10 +941,10 @@ class ConvertToSCAILPose:
         }
 
     RETURN_TYPES = ("DWPOSES",)
-    RETURN_NAMES = ("dw_poses",)
+    RETURN_NAMES = ("scail_pose",)
     FUNCTION = "convert"
     CATEGORY = "ProportionChanger"
-    DESCRIPTION = "Convert 25-point POSE_KEYPOINT to SCAIL-Pose DWPOSES."
+    DESCRIPTION = "Convert 25-point POSE_KEYPOINT to SCAIL-Pose data."
 
     def convert(self, keypoints):
         num_body = 18
