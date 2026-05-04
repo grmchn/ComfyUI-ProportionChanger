@@ -1,0 +1,449 @@
+{
+  "id": "f42bdf78-13c5-41dd-a59c-cccf3931b3d6",
+  "revision": 0,
+  "last_node_id": 9,
+  "last_link_id": 9,
+  "nodes": [
+    {
+      "id": 2,
+      "type": "ProportionChangerDWPoseRender",
+      "pos": [
+        11278.993552284224,
+        13262.710730352575
+      ],
+      "size": [
+        292.06991100606353,
+        231.232175868563
+      ],
+      "flags": {},
+      "order": 5,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pose_keypoint",
+          "type": "POSE_KEYPOINT",
+          "link": 1
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            4
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUI-ProportionChanger",
+        "ver": "129956b9dfbae9caee773d123ca98c5c3ec2a963",
+        "Node name for S&R": "ProportionChangerDWPoseRender"
+      },
+      "widgets_values": [
+        true,
+        false,
+        true,
+        true,
+        -1,
+        4,
+        3,
+        2
+      ]
+    },
+    {
+      "id": 5,
+      "type": "DownloadAndLoadMascotDWPoseModel",
+      "pos": [
+        10897.311143896197,
+        13059.67056842869
+      ],
+      "size": [
+        324.027295577995,
+        117.96502279387641
+      ],
+      "flags": {},
+      "order": 0,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "mascot_pose_model",
+          "type": "MASCOT_POSE_MODEL",
+          "links": [
+            2
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUI-ProportionChanger",
+        "ver": "6cc0d36dbee7009a72ffaee02d527cfb491a49cd",
+        "Node name for S&R": "DownloadAndLoadMascotDWPoseModel"
+      },
+      "widgets_values": [
+        "https://huggingface.co/grmchn/mascot-pose-detect/resolve/main/keypoint/dinov2_vitpose_l/model.onnx",
+        true,
+        true
+      ]
+    },
+    {
+      "id": 9,
+      "type": "MascotBBoxDetector",
+      "pos": [
+        10928.928485808807,
+        13639.126436209765
+      ],
+      "size": [
+        270,
+        126
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "mascot_bbox_model",
+          "type": "MASCOT_BBOX_MODEL",
+          "link": 6
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 9
+        }
+      ],
+      "outputs": [
+        {
+          "name": "bboxes",
+          "type": "BOUNDING_BOX",
+          "links": [
+            7
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUI-ProportionChanger",
+        "ver": "d3d8dc648ba9eaac4ea2dfc92934801f464f221d",
+        "Node name for S&R": "MascotBBoxDetector"
+      },
+      "widgets_values": [
+        0.3,
+        "all",
+        7
+      ]
+    },
+    {
+      "id": 3,
+      "type": "MascotDWPoseDetector",
+      "pos": [
+        10911.174567094757,
+        13265.363863560548
+      ],
+      "size": [
+        303.181640625,
+        126
+      ],
+      "flags": {},
+      "order": 3,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "mascot_pose_model",
+          "type": "MASCOT_POSE_MODEL",
+          "link": 2
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 3
+        }
+      ],
+      "outputs": [
+        {
+          "name": "pose_keypoint",
+          "type": "POSE_KEYPOINT",
+          "links": [
+            1
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUI-ProportionChanger",
+        "ver": "129956b9dfbae9caee773d123ca98c5c3ec2a963",
+        "Node name for S&R": "MascotDWPoseDetector"
+      },
+      "widgets_values": [
+        1024,
+        1024,
+        0.3
+      ]
+    },
+    {
+      "id": 8,
+      "type": "DownloadAndLoadMascotBBoxModel",
+      "pos": [
+        10906.991293223222,
+        13848.213131416776
+      ],
+      "size": [
+        316.858984375,
+        106
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "mascot_bbox_model",
+          "type": "MASCOT_BBOX_MODEL",
+          "links": [
+            6
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "ComfyUI-ProportionChanger",
+        "ver": "d3d8dc648ba9eaac4ea2dfc92934801f464f221d",
+        "Node name for S&R": "DownloadAndLoadMascotBBoxModel"
+      },
+      "widgets_values": [
+        "https://huggingface.co/grmchn/mascot-pose-detect/resolve/main/bbox/model.onnx",
+        true,
+        true
+      ]
+    },
+    {
+      "id": 4,
+      "type": "PreviewImage",
+      "pos": [
+        11607.208659072692,
+        13060.618490086033
+      ],
+      "size": [
+        408.15310495555605,
+        459.214360159418
+      ],
+      "flags": {},
+      "order": 7,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 4
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.20.1",
+        "Node name for S&R": "PreviewImage"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 6,
+      "type": "DrawBBoxes",
+      "pos": [
+        11295.50162511186,
+        13646.655489684257
+      ],
+      "size": [
+        218.48498643497248,
+        83.53171477178148
+      ],
+      "flags": {},
+      "order": 6,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "bboxes",
+          "type": "BOUNDING_BOX",
+          "link": 7
+        },
+        {
+          "name": "image",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 8
+        }
+      ],
+      "outputs": [
+        {
+          "name": "out_image",
+          "type": "IMAGE",
+          "links": [
+            5
+          ]
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.20.1",
+        "Node name for S&R": "DrawBBoxes"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 7,
+      "type": "PreviewImage",
+      "pos": [
+        11609.217760218778,
+        13651.709248622768
+      ],
+      "size": [
+        423.569813083039,
+        470.48009396184807
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 5
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.20.1",
+        "Node name for S&R": "PreviewImage"
+      },
+      "widgets_values": []
+    },
+    {
+      "id": 1,
+      "type": "LoadImage",
+      "pos": [
+        10456.636981280677,
+        13282.186269594056
+      ],
+      "size": [
+        383.5197105552161,
+        480.12407876083853
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            3,
+            8,
+            9
+          ]
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "cnr_id": "comfy-core",
+        "ver": "0.20.1",
+        "Node name for S&R": "LoadImage"
+      },
+      "widgets_values": [
+        "kariusagi_gray_1024.png",
+        "image"
+      ]
+    }
+  ],
+  "links": [
+    [
+      1,
+      3,
+      0,
+      2,
+      0,
+      "POSE_KEYPOINT"
+    ],
+    [
+      2,
+      5,
+      0,
+      3,
+      0,
+      "MASCOT_POSE_MODEL"
+    ],
+    [
+      3,
+      1,
+      0,
+      3,
+      1,
+      "IMAGE"
+    ],
+    [
+      4,
+      2,
+      0,
+      4,
+      0,
+      "IMAGE"
+    ],
+    [
+      5,
+      6,
+      0,
+      7,
+      0,
+      "IMAGE"
+    ],
+    [
+      6,
+      8,
+      0,
+      9,
+      0,
+      "MASCOT_BBOX_MODEL"
+    ],
+    [
+      7,
+      9,
+      0,
+      6,
+      0,
+      "BOUNDING_BOX"
+    ],
+    [
+      8,
+      1,
+      0,
+      6,
+      1,
+      "IMAGE"
+    ],
+    [
+      9,
+      1,
+      0,
+      9,
+      1,
+      "IMAGE"
+    ]
+  ],
+  "groups": [],
+  "config": {},
+  "extra": {
+    "ds": {
+      "scale": 0.6115909044841475,
+      "offset": [
+        -9466.119449363447,
+        -12761.040158696054
+      ]
+    },
+    "frontendVersion": "1.42.15",
+    "VHS_latentpreview": false,
+    "VHS_latentpreviewrate": 0,
+    "VHS_MetadataImage": true,
+    "VHS_KeepIntermediate": true
+  },
+  "version": 0.4
+}
