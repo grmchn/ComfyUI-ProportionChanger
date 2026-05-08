@@ -644,7 +644,7 @@ def _build_hand_2d(
 
     out: list[float] = []
     for x, y in points:
-        out.extend([float(x) / canvas_w, float(y) / canvas_h, 0.5])
+        out.extend([float(x) / img_w * canvas_w, float(y) / img_h * canvas_h, 0.5])
     return out
 
 
@@ -662,7 +662,13 @@ def build_person_dict(
             pose_kp.extend([0.0, 0.0, 0.0])
             continue
         x, y, score = kp_25_pixel[idx]
-        pose_kp.extend([float(x) / img_width, float(y) / img_height, float(score)])
+        pose_kp.extend(
+            [
+                float(x) / img_width * canvas_width,
+                float(y) / img_height * canvas_height,
+                float(score),
+            ]
+        )
 
     right_hand = _build_hand_2d(
         stage1_bbox.get("hand_right"),
@@ -672,8 +678,8 @@ def build_person_dict(
         side="right",
         img_w=img_width,
         img_h=img_height,
-        canvas_w=img_width,
-        canvas_h=img_height,
+        canvas_w=canvas_width,
+        canvas_h=canvas_height,
     )
     left_hand = _build_hand_2d(
         stage1_bbox.get("hand_left"),
@@ -683,8 +689,8 @@ def build_person_dict(
         side="left",
         img_w=img_width,
         img_h=img_height,
-        canvas_w=img_width,
-        canvas_h=img_height,
+        canvas_w=canvas_width,
+        canvas_h=canvas_height,
     )
 
     return {
@@ -946,6 +952,35 @@ class ConvertToSCAILPose:
     CATEGORY = "ProportionChanger"
     DESCRIPTION = "Convert 25-point POSE_KEYPOINT to SCAIL-Pose data."
 
+    @staticmethod
+    def _normalized_xy_scores(raw, num_points, canvas_width, canvas_height, *, skip_points=0):
+        if len(raw) < (skip_points + num_points) * 3:
+            return None, None
+
+        arr = np.asarray(raw, dtype=np.float32).reshape(-1, 3)[skip_points : skip_points + num_points]
+        coords = arr[:, :2].copy()
+        scores = arr[:, 2].copy()
+
+        valid_x = np.isfinite(coords[:, 0])
+        valid_y = np.isfinite(coords[:, 1])
+        valid_score = np.isfinite(scores)
+        invalid = ~(valid_x & valid_y & valid_score)
+
+        visible = (scores > 0) & ~invalid
+        visible_coords = coords[visible]
+        already_normalized = True
+        if visible_coords.size > 0:
+            already_normalized = float(np.nanmax(np.abs(visible_coords))) <= 2.0
+
+        if not already_normalized and canvas_width > 0:
+            coords[:, 0] /= float(canvas_width)
+        if not already_normalized and canvas_height > 0:
+            coords[:, 1] /= float(canvas_height)
+
+        coords[invalid] = 0.0
+        scores[invalid] = 0.0
+        return coords, scores
+
     def convert(self, keypoints):
         num_body = 18
         num_face = 68
@@ -966,28 +1001,40 @@ class ConvertToSCAILPose:
             for person in people:
                 if not isinstance(person, dict):
                     continue
+
+                canvas_width = float(frame.get("canvas_width", 1) or 1)
+                canvas_height = float(frame.get("canvas_height", 1) or 1)
+
                 pose_raw = person.get("pose_keypoints_2d") or []
-                if len(pose_raw) < num_body * 3:
+                body_xy, body_score = self._normalized_xy_scores(
+                    pose_raw, num_body, canvas_width, canvas_height
+                )
+                if body_xy is None:
                     continue
-                body_arr = np.asarray(pose_raw[: num_body * 3], dtype=np.float32).reshape(num_body, 3)
-                bodies.append(body_arr[:, :2])
-                body_scores.append(body_arr[:, 2])
+                bodies.append(body_xy)
+                body_scores.append(body_score)
 
                 face_raw = person.get("face_keypoints_2d") or []
-                if len(face_raw) >= num_face * 3:
-                    face_arr = np.asarray(face_raw[: num_face * 3], dtype=np.float32).reshape(num_face, 3)
-                    faces.append(face_arr[:, :2])
-                    face_scores.append(face_arr[:, 2])
+                face_skip = 1 if len(face_raw) >= (num_face + 1) * 3 else 0
+                face_xy, face_score = self._normalized_xy_scores(
+                    face_raw, num_face, canvas_width, canvas_height, skip_points=face_skip
+                )
+                if face_xy is not None:
+                    faces.append(face_xy)
+                    face_scores.append(face_score)
                 else:
                     faces.append(np.zeros((num_face, 2), dtype=np.float32))
                     face_scores.append(np.zeros(num_face, dtype=np.float32))
 
-                for hand_key in ("hand_left_keypoints_2d", "hand_right_keypoints_2d"):
+                # SCAIL-Pose's VitPose converter stores hands as right, then left.
+                for hand_key in ("hand_right_keypoints_2d", "hand_left_keypoints_2d"):
                     hand_raw = person.get(hand_key) or []
-                    if len(hand_raw) == num_hand * 3:
-                        hand_arr = np.asarray(hand_raw, dtype=np.float32).reshape(num_hand, 3)
-                        hands.append(hand_arr[:, :2])
-                        hand_scores.append(hand_arr[:, 2])
+                    hand_xy, hand_score = self._normalized_xy_scores(
+                        hand_raw, num_hand, canvas_width, canvas_height
+                    )
+                    if hand_xy is not None:
+                        hands.append(hand_xy)
+                        hand_scores.append(hand_score)
 
             out_frames.append(
                 {
@@ -995,8 +1042,14 @@ class ConvertToSCAILPose:
                         "candidate": np.asarray(bodies, dtype=np.float32)
                         if bodies
                         else np.zeros((0, num_body, 2), dtype=np.float32),
-                        "subset": np.asarray([np.arange(num_body) for _ in bodies], dtype=np.float32)
-                        if bodies
+                        "subset": np.asarray(
+                            [
+                                np.where(score > 0.3, np.arange(num_body), -1)
+                                for score in body_scores
+                            ],
+                            dtype=np.float32,
+                        )
+                        if body_scores
                         else np.zeros((0, num_body), dtype=np.float32),
                     },
                     "hands": np.asarray(hands, dtype=np.float32)
@@ -1017,4 +1070,4 @@ class ConvertToSCAILPose:
                 }
             )
 
-        return ({"poses": out_frames, "swap_hands": False},)
+        return ({"poses": out_frames, "swap_hands": True},)
