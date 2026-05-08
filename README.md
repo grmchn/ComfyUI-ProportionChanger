@@ -62,6 +62,11 @@ Please refer to example_workflows.
 - Connect the resulting `pose_keypoint` to ProportionChanger Reference / Render nodes
 - Example workflow: `example_workflows/proportion_changer_pose_data_to_pose_keypoint.json`
 
+### Converting to SCAIL-Pose
+- Connect a changed `POSE_KEYPOINT` to **pose_keypoint to SCAIL-Pose**
+- Use the resulting `DWPOSES` with SCAIL-Pose workflows
+- Example workflow: `example_workflows/proportion_changer_SCAIL_pose.json`
+
 ## Troubleshooting
 
 ### Common Issues

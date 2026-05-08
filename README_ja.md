@@ -62,6 +62,11 @@ example_workflowsを参照してください。
 - 出力された`pose_keypoint`をProportionChanger Reference / Renderノードに接続
 - サンプルワークフロー: `example_workflows/proportion_changer_pose_data_to_pose_keypoint.json`
 
+### SCAIL-Poseへの変換
+- 変更後の`POSE_KEYPOINT`を **pose_keypoint to SCAIL-Pose** に接続
+- 出力された`DWPOSES`をSCAIL-Pose系ワークフローで使用
+- サンプルワークフロー: `example_workflows/proportion_changer_SCAIL_pose.json`
+
 
 ## トラブルシューティング
 
