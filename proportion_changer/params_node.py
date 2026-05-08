@@ -27,9 +27,14 @@ class ProportionChangerParams:
                 "neck_scale": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01}),
                 "shoulder_scale": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01}),
                 "arm_scale": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01}),
+                "upper_arm_scale": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01}),
+                "lower_arm_scale": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01}),
                 "torso_scale": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01}),
                 "pelvis_scale": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01}),
                 "leg_scale": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01}),
+                "thigh_scale": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01}),
+                "lower_leg_scale": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01}),
+                "feet_scale": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 10.0, "step": 0.01}),
                 
                 # === FACE KEYPOINTS (face top to bottom order) ===
                 "face_shape_scale": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 5.0, "step": 0.01}),
@@ -76,7 +81,9 @@ class ProportionChangerParams:
                             left_eye_scale=1.0, right_eye_scale=1.0, left_eyebrow_scale=1.0,
                             right_eyebrow_scale=1.0, mouth_scale=1.0, nose_scale_face=1.0,
                             face_shape_scale=1.0, shoulder_scale=1.0, arm_scale=1.0,
-                            leg_scale=1.0, hands_scale=1.0, overall_scale=1.0,
+                            upper_arm_scale=1.0, lower_arm_scale=1.0, leg_scale=1.0,
+                            thigh_scale=1.0, lower_leg_scale=1.0, feet_scale=1.0,
+                            hands_scale=1.0, overall_scale=1.0,
                             rotate_angle=0.0, translate_x=0.0, translate_y=0.0):
         """
         pose_keypointデータを各種パラメータで調整
@@ -106,7 +113,12 @@ class ProportionChangerParams:
             "face_shape_scale": face_shape_scale,
             "shoulder_scale": shoulder_scale,
             "arm_scale": arm_scale,
+            "upper_arm_scale": upper_arm_scale,
+            "lower_arm_scale": lower_arm_scale,
             "leg_scale": leg_scale,
+            "thigh_scale": thigh_scale,
+            "lower_leg_scale": lower_leg_scale,
+            "feet_scale": feet_scale,
             "hands_scale": hands_scale,
             "overall_scale": overall_scale,
             "rotate_angle": rotate_angle,
@@ -144,7 +156,9 @@ class ProportionChangerParams:
             "left_eye_scale": 1.0, "right_eye_scale": 1.0, "left_eyebrow_scale": 1.0,
             "right_eyebrow_scale": 1.0, "mouth_scale": 1.0, "nose_scale_face": 1.0,
             "face_shape_scale": 1.0, "shoulder_scale": 1.0, "arm_scale": 1.0,
-            "leg_scale": 1.0, "hands_scale": 1.0, "overall_scale": 1.0,
+            "upper_arm_scale": 1.0, "lower_arm_scale": 1.0, "leg_scale": 1.0,
+            "thigh_scale": 1.0, "lower_leg_scale": 1.0, "feet_scale": 1.0,
+            "hands_scale": 1.0, "overall_scale": 1.0,
             "rotate_angle": 0.0, "translate_x": 0.0, "translate_y": 0.0
         }
         
@@ -297,7 +311,12 @@ class ProportionChangerParams:
         head_scale = params.get("head_scale", 1.0)
         shoulder_scale = params.get("shoulder_scale", 1.0)
         arm_scale = params.get("arm_scale", 1.0)
+        upper_arm_scale = params.get("upper_arm_scale", 1.0)
+        lower_arm_scale = params.get("lower_arm_scale", 1.0)
         leg_scale = params.get("leg_scale", 1.0)
+        thigh_scale = params.get("thigh_scale", 1.0)
+        lower_leg_scale = params.get("lower_leg_scale", 1.0)
+        feet_scale = params.get("feet_scale", 1.0)
         
         # Get original reference points (always from original keypoints)
         orig_r_hip = get_point(original, KP["RHip"])
@@ -422,66 +441,71 @@ class ProportionChangerParams:
                         head_moved = [orig_head_point[0] + neck_movement[0], orig_head_point[1] + neck_movement[1]]
                         set_point(adjusted, KP[head_kp], head_moved)
         
-        # 5. Arm adjustment (from original arm joints, based on position after shoulder adjustment)
-        if arm_scale != 1.0 and current_r_shoulder and current_l_shoulder:
+        # 5. Arm adjustment. arm_scale remains the full-arm base scale;
+        # upper/lower arm scales additionally affect each segment.
+        if current_r_shoulder and current_l_shoulder:
             for side_prefix, current_shoulder, orig_shoulder in [
                 ("R", current_r_shoulder, orig_r_shoulder), 
                 ("L", current_l_shoulder, orig_l_shoulder)
             ]:
-                for joint in ["Elbow", "Wrist"]:
-                    kp_name = f"{side_prefix}{joint}"
-                    if kp_name in KP:
-                        orig_joint = get_point(original, KP[kp_name])
-                        if orig_joint and orig_shoulder:
-                            new_joint = [
-                                current_shoulder[0] + (orig_joint[0] - orig_shoulder[0]) * arm_scale,
-                                current_shoulder[1] + (orig_joint[1] - orig_shoulder[1]) * arm_scale
-                            ]
-                            set_point(adjusted, KP[kp_name], new_joint)
-        elif current_r_shoulder and current_l_shoulder:
-            # arm_scale=1.0の場合、shoulder移動の影響のみ適用
-            for side_prefix, current_shoulder, orig_shoulder in [
-                ("R", current_r_shoulder, orig_r_shoulder), 
-                ("L", current_l_shoulder, orig_l_shoulder)
-            ]:
-                if orig_shoulder:
-                    shoulder_movement = [current_shoulder[0] - orig_shoulder[0], current_shoulder[1] - orig_shoulder[1]]
-                    for joint in ["Elbow", "Wrist"]:
-                        kp_name = f"{side_prefix}{joint}"
-                        if kp_name in KP:
-                            orig_joint = get_point(original, KP[kp_name])
-                            if orig_joint:
-                                new_joint = [orig_joint[0] + shoulder_movement[0], orig_joint[1] + shoulder_movement[1]]
-                                set_point(adjusted, KP[kp_name], new_joint)
+                if not orig_shoulder:
+                    continue
+
+                orig_elbow = get_point(original, KP[f"{side_prefix}Elbow"])
+                orig_wrist = get_point(original, KP[f"{side_prefix}Wrist"])
+                if orig_elbow:
+                    new_elbow = [
+                        current_shoulder[0] + (orig_elbow[0] - orig_shoulder[0]) * arm_scale * upper_arm_scale,
+                        current_shoulder[1] + (orig_elbow[1] - orig_shoulder[1]) * arm_scale * upper_arm_scale
+                    ]
+                    set_point(adjusted, KP[f"{side_prefix}Elbow"], new_elbow)
+                else:
+                    new_elbow = None
+
+                if orig_wrist:
+                    if orig_elbow and new_elbow:
+                        new_wrist = [
+                            new_elbow[0] + (orig_wrist[0] - orig_elbow[0]) * arm_scale * lower_arm_scale,
+                            new_elbow[1] + (orig_wrist[1] - orig_elbow[1]) * arm_scale * lower_arm_scale
+                        ]
+                    else:
+                        new_wrist = [
+                            current_shoulder[0] + (orig_wrist[0] - orig_shoulder[0]) * arm_scale * lower_arm_scale,
+                            current_shoulder[1] + (orig_wrist[1] - orig_shoulder[1]) * arm_scale * lower_arm_scale
+                        ]
+                    set_point(adjusted, KP[f"{side_prefix}Wrist"], new_wrist)
         
         # 6. Leg adjustment (from original leg joints, based on position after pelvis adjustment)
         current_r_hip = get_point(adjusted, KP["RHip"])
         current_l_hip = get_point(adjusted, KP["LHip"])
         
-        if leg_scale != 1.0:
-            for side_prefix, current_hip, orig_hip in [("R", current_r_hip, orig_r_hip), ("L", current_l_hip, orig_l_hip)]:
-                for joint in ["Knee", "Ankle"]:
-                    kp_name = f"{side_prefix}{joint}"
-                    if kp_name in KP:
-                        orig_joint = get_point(original, KP[kp_name])
-                        if orig_joint and orig_hip:
-                            new_joint = [
-                                current_hip[0] + (orig_joint[0] - orig_hip[0]) * leg_scale,
-                                current_hip[1] + (orig_joint[1] - orig_hip[1]) * leg_scale
-                            ]
-                            set_point(adjusted, KP[kp_name], new_joint)
-        else:
-            # leg_scale=1.0の場合、pelvis移動の影響のみ適用
-            for side_prefix, current_hip, orig_hip in [("R", current_r_hip, orig_r_hip), ("L", current_l_hip, orig_l_hip)]:
-                if orig_hip:
-                    hip_movement = [current_hip[0] - orig_hip[0], current_hip[1] - orig_hip[1]]
-                    for joint in ["Knee", "Ankle"]:
-                        kp_name = f"{side_prefix}{joint}"
-                        if kp_name in KP:
-                            orig_joint = get_point(original, KP[kp_name])
-                            if orig_joint:
-                                new_joint = [orig_joint[0] + hip_movement[0], orig_joint[1] + hip_movement[1]]
-                                set_point(adjusted, KP[kp_name], new_joint)
+        for side_prefix, current_hip, orig_hip in [("R", current_r_hip, orig_r_hip), ("L", current_l_hip, orig_l_hip)]:
+            if not current_hip or not orig_hip:
+                continue
+
+            orig_knee = get_point(original, KP[f"{side_prefix}Knee"])
+            orig_ankle = get_point(original, KP[f"{side_prefix}Ankle"])
+            if orig_knee:
+                new_knee = [
+                    current_hip[0] + (orig_knee[0] - orig_hip[0]) * leg_scale * thigh_scale,
+                    current_hip[1] + (orig_knee[1] - orig_hip[1]) * leg_scale * thigh_scale
+                ]
+                set_point(adjusted, KP[f"{side_prefix}Knee"], new_knee)
+            else:
+                new_knee = None
+
+            if orig_ankle:
+                if orig_knee and new_knee:
+                    new_ankle = [
+                        new_knee[0] + (orig_ankle[0] - orig_knee[0]) * leg_scale * lower_leg_scale,
+                        new_knee[1] + (orig_ankle[1] - orig_knee[1]) * leg_scale * lower_leg_scale
+                    ]
+                else:
+                    new_ankle = [
+                        current_hip[0] + (orig_ankle[0] - orig_hip[0]) * leg_scale * lower_leg_scale,
+                        current_hip[1] + (orig_ankle[1] - orig_hip[1]) * leg_scale * lower_leg_scale
+                    ]
+                set_point(adjusted, KP[f"{side_prefix}Ankle"], new_ankle)
         
         # 7. Toe/heel adjustment (ankle-based leg_scale scaling)
         current_l_ankle = get_point(adjusted, KP["LAnkle"])
@@ -503,17 +527,9 @@ class ProportionChangerParams:
                     current_ankle and orig_ankle):  # Only if both ankle and toe exist
                     
                     orig_toe_heel = [original[keypoint_start], original[keypoint_start + 1]]
-                    confidence = original[keypoint_start + 2]
-                    
-                    if leg_scale != 1.0:
-                        # Maintain direction vector from ankle to toe, scale distance only
-                        orig_relative = [orig_toe_heel[0] - orig_ankle[0], orig_toe_heel[1] - orig_ankle[1]]
-                        scaled_relative = [orig_relative[0] * leg_scale, orig_relative[1] * leg_scale]
-                        new_toe_heel = [current_ankle[0] + scaled_relative[0], current_ankle[1] + scaled_relative[1]]
-                    else:
-                        # leg_scale=1.0: follow ankle movement
-                        ankle_movement = [current_ankle[0] - orig_ankle[0], current_ankle[1] - orig_ankle[1]]
-                        new_toe_heel = [orig_toe_heel[0] + ankle_movement[0], orig_toe_heel[1] + ankle_movement[1]]
+                    orig_relative = [orig_toe_heel[0] - orig_ankle[0], orig_toe_heel[1] - orig_ankle[1]]
+                    scaled_relative = [orig_relative[0] * leg_scale * feet_scale, orig_relative[1] * leg_scale * feet_scale]
+                    new_toe_heel = [current_ankle[0] + scaled_relative[0], current_ankle[1] + scaled_relative[1]]
                     
                     # Update toe/heel position
                     adjusted[keypoint_start] = new_toe_heel[0]

@@ -14,7 +14,7 @@
 - **ProportionChanger Pose Detector**: 画像からKeyPointを検出する
 - **ProportionChanger Reference**: 参照用ポーズにプロポーションを変換する
 - **ProportionChanger Pose Render**: KeyPointを画像に変換する
-- **ProportionChanger Params**: KeyPointの各パーツのパラメータを調整する
+- **ProportionChanger Params**: KeyPointの各パーツのパラメータを調整する（上腕・下腕・太腿・下腿・足先の個別スケールを含む）
 - **ProportionChanger Interpolator**: KeyPoint動画を中割りして補間する
 - **PoseData to pose_keypoint**: WanAnimateの`POSEDATA`を`POSE_KEYPOINT`に変換する
 - **pose_keypoint resize**: `POSE_KEYPOINT`を指定サイズにリサイズ（アスペクト比が違う場合はパディング→スケールで歪みを防ぐ）

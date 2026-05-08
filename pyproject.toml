@@ -1,7 +1,7 @@
 [project]
 name = "ComfyUI-ProportionChanger"
 description = "Advanced pose-based body proportion changer for ComfyUI"
-version = "1.1.0"
+version = "1.2.0"
 license = {file = "LICENSE"}
 dependencies = ["torch", "numpy", "opencv-python", "tqdm"]
 
