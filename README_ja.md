@@ -77,7 +77,7 @@ example_workflowsを参照してください。
 
 ### Mascot Poseモデル
 
-Mascot Poseノードは、HuggingFaceの`grmchn/mascot-pose-detect`から`ComfyUI/models/mascot_body_detect`へモデルをダウンロードします。公式モデルパッケージはApache 2.0で、`keypoint/dinov2_vitpose_l` variantを使用します。ノードコードはこのリポジトリの一部であり、ダウンロードされたモデルの利用はモデル側のライセンスに従います。
+Mascot Poseノードは、HuggingFaceの`grmchn/mascot-pose-detect`から`ComfyUI/models/mascot_body_detect`へモデルをダウンロードします。公式モデルパッケージはApache 2.0で、デフォルトでは`keypoint/dinov2_vitpose_l_v2` variantを使用します。以前の`keypoint/dinov2_vitpose_l` variantも同じモデルリポジトリ内に残しています。ノードコードはこのリポジトリの一部であり、ダウンロードされたモデルの利用はモデル側のライセンスに従います。
 
 ## 帰属とクレジット
 ### Special Thanks

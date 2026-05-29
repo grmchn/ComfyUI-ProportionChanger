@@ -76,7 +76,7 @@ Please refer to example_workflows.
 
 ### Mascot Pose Models
 
-Mascot pose nodes download model artifacts from `grmchn/mascot-pose-detect` on HuggingFace into `ComfyUI/models/mascot_body_detect`. The official model package is Apache 2.0 and uses the `keypoint/dinov2_vitpose_l` variant. The node code remains part of this repository, and use of the downloaded models is subject to the model package license.
+Mascot pose nodes download model artifacts from `grmchn/mascot-pose-detect` on HuggingFace into `ComfyUI/models/mascot_body_detect`. The official model package is Apache 2.0 and uses the `keypoint/dinov2_vitpose_l_v2` variant by default. The previous `keypoint/dinov2_vitpose_l` variant remains available in the same model repository. The node code remains part of this repository, and use of the downloaded models is subject to the model package license.
 
 ## Attribution and Credits
 ### Special Thanks

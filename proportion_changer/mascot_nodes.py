@@ -39,9 +39,11 @@ MASCOT_BBOX_MODEL_URLS = [
     f"{HF_BASE_URL}/bbox/model.onnx",
 ]
 MASCOT_DWPOSE_MODEL_URLS = [
+    f"{HF_BASE_URL}/keypoint/dinov2_vitpose_l_v2/model.onnx",
     f"{HF_BASE_URL}/keypoint/dinov2_vitpose_l/model.onnx",
 ]
 POSE_URL_TO_VARIANT = {
+    f"{HF_BASE_URL}/keypoint/dinov2_vitpose_l_v2/model.onnx": "dinov2_vitpose_l_v2",
     f"{HF_BASE_URL}/keypoint/dinov2_vitpose_l/model.onnx": "dinov2_vitpose_l",
 }
 BBOX_KEYS = (
@@ -554,7 +556,7 @@ def infer_keypoints_pixel(
     if outputs is None or matrix is None:
         return [[0.0, 0.0, 0.0] for _ in range(25)]
 
-    if variant in {"vitpose_l", "dinov2_vitpose_l"}:
+    if variant in {"vitpose_l", "dinov2_vitpose_l", "dinov2_vitpose_l_v2"}:
         scale = float(kp_meta.get("heatmap_to_input_scale", 4.0))
         kp_crop = decode_heatmap(outputs[0][0], scale)
         kp_image_17 = crop_to_image_points(kp_crop, matrix)
@@ -708,7 +710,7 @@ class DownloadAndLoadMascotDWPoseModel:
             "required": {
                 "url": (
                     MASCOT_DWPOSE_MODEL_URLS,
-                    {"default": f"{HF_BASE_URL}/keypoint/dinov2_vitpose_l/model.onnx"},
+                    {"default": f"{HF_BASE_URL}/keypoint/dinov2_vitpose_l_v2/model.onnx"},
                 ),
                 "cuda": (
                     "BOOLEAN",

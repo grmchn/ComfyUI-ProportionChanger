@@ -80,7 +80,7 @@
         "Node name for S&R": "DownloadAndLoadMascotDWPoseModel"
       },
       "widgets_values": [
-        "https://huggingface.co/grmchn/mascot-pose-detect/resolve/main/keypoint/dinov2_vitpose_l/model.onnx",
+        "https://huggingface.co/grmchn/mascot-pose-detect/resolve/main/keypoint/dinov2_vitpose_l_v2/model.onnx",
         true,
         true
       ]
